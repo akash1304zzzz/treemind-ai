@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "video-extractor": {
+      "command": "python",
+      "args": [
+        "d:/Antigravity_IDE/contentsorter/scripts/extractor.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
