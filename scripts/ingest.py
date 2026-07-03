@@ -200,6 +200,36 @@ def download_youtube_via_ytdlp(url, output_dir="temp_videos"):
         logger.error(f"yt-dlp download failed: {e}")
         return None, None
 
+def call_nvidia_llm(prompt, api_key):
+    logger.info("Calling NVIDIA NIM API (Llama-3.1-70b-instruct)...")
+    try:
+        url = "https://integrate.api.nvidia.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "meta/llama-3.1-70b-instruct",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt + "\nRespond strictly in valid JSON format matching the schema."
+                }
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2048,
+            "response_format": {"type": "json_object"}
+        }
+        
+        r = requests.post(url, headers=headers, json=data)
+        r.raise_for_status()
+        response_json = r.json()
+        content = response_json["choices"][0]["message"]["content"]
+        return content
+    except Exception as e:
+        logger.error(f"NVIDIA API call failed: {e}")
+        return None
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--queue", type=str, default="queue.md")
@@ -264,16 +294,19 @@ def main():
     
     existing_categories_str = "\n".join([f"- {' / '.join(p)}" for p in existing_categories])
 
-    # Check Gemini API Key
+    # Check API Keys
     gemini_key = os.environ.get("GEMINI_API_KEY")
+    nvidia_key = os.environ.get("NVIDIA_API_KEY")
     apify_token = os.environ.get("APIFY_TOKEN")
 
-    if not gemini_key:
-        logger.error("GEMINI_API_KEY is not set. Ingestion cannot proceed with LLM processing.")
-        print("ERROR: GEMINI_API_KEY is missing. Please set it in .env")
+    if not gemini_key and not nvidia_key:
+        logger.error("Neither GEMINI_API_KEY nor NVIDIA_API_KEY is set. Ingestion cannot proceed.")
+        print("ERROR: API key is missing. Please set GEMINI_API_KEY or NVIDIA_API_KEY in .env")
         sys.exit(1)
 
-    client = genai.Client(api_key=gemini_key)
+    client = None
+    if gemini_key:
+        client = genai.Client(api_key=gemini_key)
 
     processed_count = 0
 
@@ -339,41 +372,44 @@ def main():
         uploaded_file = None
         
         try:
-            if video_path and os.path.exists(video_path):
-                logger.info("Uploading video to Gemini files API...")
-                uploaded_file = client.files.upload(file=video_path)
-                
-                while uploaded_file.state.name == "PROCESSING":
-                    logger.info("Gemini processing video, waiting 3 seconds...")
-                    time.sleep(3)
-                    uploaded_file = client.files.get(name=uploaded_file.name)
-                    
-                if uploaded_file.state.name == "FAILED":
-                    raise Exception("Gemini video file processing failed.")
-                
-                logger.info("Analyzing video using gemini-2.5-flash...")
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[uploaded_file, prompt],
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=NoteData,
-                    ),
-                )
-                response_text = response.text
+            if nvidia_key:
+                response_text = call_nvidia_llm(prompt, nvidia_key)
             else:
-                # Fallback to text-only analysis if video download failed
-                logger.warning("No video file downloaded. Falling back to text-only metadata analysis.")
-                logger.info("Analyzing metadata using gemini-2.5-flash...")
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[prompt],
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=NoteData,
-                    ),
-                )
-                response_text = response.text
+                if video_path and os.path.exists(video_path):
+                    logger.info("Uploading video to Gemini files API...")
+                    uploaded_file = client.files.upload(file=video_path)
+                    
+                    while uploaded_file.state.name == "PROCESSING":
+                        logger.info("Gemini processing video, waiting 3 seconds...")
+                        time.sleep(3)
+                        uploaded_file = client.files.get(name=uploaded_file.name)
+                        
+                    if uploaded_file.state.name == "FAILED":
+                        raise Exception("Gemini video file processing failed.")
+                    
+                    logger.info("Analyzing video using gemini-2.5-flash...")
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[uploaded_file, prompt],
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=NoteData,
+                        ),
+                    )
+                    response_text = response.text
+                else:
+                    # Fallback to text-only analysis if video download failed
+                    logger.warning("No video file downloaded. Falling back to text-only metadata analysis.")
+                    logger.info("Analyzing metadata using gemini-2.5-flash...")
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[prompt],
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=NoteData,
+                        ),
+                    )
+                    response_text = response.text
                 
         except Exception as e:
             logger.error(f"Gemini API analysis failed: {e}")
@@ -397,11 +433,11 @@ def main():
             try:
                 # Parse structured JSON response
                 res_data = json.loads(response_text)
-                title = res_data.get("title", "Untitled Note")
-                category_path = res_data.get("categoryPath", ["General"])
-                tags = res_data.get("tags", [])
-                snippet = res_data.get("snippet", "")
-                markdown_body = res_data.get("markdown", "")
+                title = res_data.get("title") or res_data.get("Title") or "Untitled Note"
+                category_path = res_data.get("categoryPath") or res_data.get("category_path") or res_data.get("CategoryPath") or ["General"]
+                tags = res_data.get("tags") or res_data.get("Tags") or []
+                snippet = res_data.get("snippet") or res_data.get("Snippet") or ""
+                markdown_body = res_data.get("markdown") or res_data.get("Markdown") or res_data.get("content") or ""
                 
                 # Enforce max 2 categories depth
                 if len(category_path) > 2:
