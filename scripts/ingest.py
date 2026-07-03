@@ -295,8 +295,9 @@ def main():
         elif "facebook.com" in url.lower() or "fb.watch" in url.lower() or "fb.com" in url.lower():
             if apify_token:
                 video_path, scraped_meta = download_facebook_via_apify(url, apify_token)
-            else:
-                logger.warning("Facebook URL detected but APIFY_TOKEN is missing. Attempting yt-dlp.")
+            
+            if not video_path or not scraped_meta:
+                logger.warning("Apify Facebook scraper failed or returned empty. Falling back to yt-dlp.")
                 video_path, scraped_meta = download_youtube_via_ytdlp(url)
         else:
             video_path, scraped_meta = download_youtube_via_ytdlp(url)
