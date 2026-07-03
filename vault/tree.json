@@ -42,5 +42,16 @@
     "dateProcessed": "2026-07-02 22:50",
     "filePath": "vault/Trading/Platform Analysis/tradefinder_platform_analysis_strategy.md",
     "thumbnailUrl": "/api/vault/thumbnails/tradefinder_platform_analysis_strategy.jpg"
+  },
+  {
+    "id": "google_ai_studio_mobile_app_builder_facebook_version_1783114800",
+    "title": "Google AI Studio Mobile App Builder (Facebook Version)",
+    "url": "https://www.facebook.com/reel/1342798513890784",
+    "tags": ["AI Studio", "No Code", "Mobile App Development", "Vibe Coding", "Facebook Reel"],
+    "categoryPath": ["AI", "New Tech Stack"],
+    "snippet": "A duplicate of the Google AI Studio Mobile App Builder video uploaded on Facebook by Pooja Kumari, detailing code-free app construction.",
+    "dateProcessed": "2026-07-03 22:58",
+    "filePath": "vault/AI/New Tech Stack/google_ai_studio_mobile_app_builder_facebook_version.md",
+    "thumbnailUrl": "/api/vault/thumbnails/google_ai_studio_mobile_app_builder_facebook_version.jpg"
   }
 ]
