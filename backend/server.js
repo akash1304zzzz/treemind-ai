@@ -116,7 +116,7 @@ app.use('/api/vault', authMiddleware, express.static(path.join(__dirname, '../va
 
 // 5. API settings update (write keys to .env)
 app.post('/api/settings', authMiddleware, (req, res) => {
-  const { geminiApiKey, apifyToken, appPassword } = req.body;
+  const { geminiApiKey, nvidiaApiKey, apifyToken, appPassword } = req.body;
   const envPath = path.join(__dirname, '../.env');
   
   let envContent = '';
@@ -139,6 +139,7 @@ app.post('/api/settings', authMiddleware, (req, res) => {
   
   // Update values
   if (geminiApiKey !== undefined) envVars['GEMINI_API_KEY'] = geminiApiKey;
+  if (nvidiaApiKey !== undefined) envVars['NVIDIA_API_KEY'] = nvidiaApiKey;
   if (apifyToken !== undefined) envVars['APIFY_TOKEN'] = apifyToken;
   if (appPassword !== undefined) envVars['APP_PASSWORD'] = appPassword;
   
@@ -152,6 +153,7 @@ app.post('/api/settings', authMiddleware, (req, res) => {
   
   // Reload environment variables in current process memory
   if (geminiApiKey !== undefined) process.env.GEMINI_API_KEY = geminiApiKey;
+  if (nvidiaApiKey !== undefined) process.env.NVIDIA_API_KEY = nvidiaApiKey;
   if (apifyToken !== undefined) process.env.APIFY_TOKEN = apifyToken;
   if (appPassword !== undefined) process.env.APP_PASSWORD = appPassword;
   

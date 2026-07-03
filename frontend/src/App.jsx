@@ -49,6 +49,7 @@ export default function App() {
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [geminiKey, setGeminiKey] = useState('');
+  const [nvidiaKey, setNvidiaKey] = useState('');
   const [apifyToken, setApifyToken] = useState('');
   const [newAppPassword, setNewAppPassword] = useState('');
   const [settingsStatus, setSettingsStatus] = useState('');
@@ -217,6 +218,7 @@ export default function App() {
         },
         body: JSON.stringify({
           geminiApiKey: geminiKey || undefined,
+          nvidiaApiKey: nvidiaKey || undefined,
           apifyToken: apifyToken || undefined,
           appPassword: newAppPassword || undefined
         })
@@ -790,6 +792,17 @@ export default function App() {
                   placeholder="Paste GEMINI_API_KEY (hidden)"
                   value={geminiKey}
                   onChange={(e) => setGeminiKey(e.target.value)}
+                />
+              </div>
+
+              <div className="settings-field">
+                <label>NVIDIA API Key</label>
+                <input 
+                  type="password"
+                  className="url-input"
+                  placeholder="Paste NVIDIA_API_KEY (hidden)"
+                  value={nvidiaKey}
+                  onChange={(e) => setNvidiaKey(e.target.value)}
                 />
               </div>
 
