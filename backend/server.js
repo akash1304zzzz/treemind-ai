@@ -96,6 +96,9 @@ app.get('/api/tree', authMiddleware, (req, res) => {
   try {
     const content = fs.readFileSync(treePath, 'utf8');
     const data = JSON.parse(content);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to parse vault tree index: ' + error.message });
@@ -103,7 +106,13 @@ app.get('/api/tree', authMiddleware, (req, res) => {
 });
 
 // 4. Vault Files Static Access
-app.use('/api/vault', authMiddleware, express.static(path.join(__dirname, '../vault')));
+app.use('/api/vault', authMiddleware, express.static(path.join(__dirname, '../vault'), {
+  setHeaders: (res, path) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+}));
 
 // 5. API settings update (write keys to .env)
 app.post('/api/settings', authMiddleware, (req, res) => {
