@@ -185,6 +185,93 @@ app.post('/api/ingest', authMiddleware, (req, res) => {
   });
 });
 
+// 7. Update Note Metadata (Category & Tags)
+app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
+  const { id, categoryPath, tags } = req.body;
+  
+  if (!id || !categoryPath || !Array.isArray(categoryPath) || !tags || !Array.isArray(tags)) {
+    return res.status(400).json({ error: 'Missing or invalid parameters.' });
+  }
+
+  const treePath = path.join(__dirname, '../vault/tree.json');
+  if (!fs.existsSync(treePath)) {
+    return res.status(404).json({ error: 'Vault tree index file not found.' });
+  }
+
+  try {
+    const content = fs.readFileSync(treePath, 'utf8');
+    const treeData = JSON.parse(content);
+    
+    const noteIndex = treeData.findIndex(item => item.id === id);
+    if (noteIndex === -1) {
+      return res.status(404).json({ error: 'Note not found in index.' });
+    }
+
+    const note = treeData[noteIndex];
+    const oldRelativePath = note.filePath;
+    const fullOldPath = path.join(__dirname, '..', oldRelativePath);
+
+    if (!fs.existsSync(fullOldPath)) {
+      return res.status(404).json({ error: 'Note Markdown file not found on disk.' });
+    }
+
+    // Read and parse markdown content
+    let fileContent = fs.readFileSync(fullOldPath, 'utf8');
+    const match = fileContent.match(/^---([\s\S]*?)---\n*([\s\S]*)$/);
+    let newFileContent = fileContent;
+
+    if (match) {
+      const frontmatterText = match[1];
+      const markdownBody = match[2];
+      const lines = frontmatterText.split('\n');
+      
+      const updatedLines = lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('tags:')) {
+          return `tags: ${JSON.stringify(tags)}`;
+        }
+        if (trimmed.startsWith('category:')) {
+          return `category: "${categoryPath.join(' / ')}"`;
+        }
+        return line;
+      });
+      newFileContent = `---\n${updatedLines.join('\n')}\n---\n\n${markdownBody.trim()}\n`;
+    }
+
+    // Create new folder structure if directory path changed
+    const newCategoryDir = path.join(__dirname, '../vault', ...categoryPath);
+    fs.mkdirSync(newCategoryDir, { recursive: true });
+
+    const filename = path.basename(oldRelativePath);
+    const newRelativePath = path.join('vault', ...categoryPath, filename).replace(/\\/g, '/');
+    const fullNewPath = path.join(__dirname, '..', newRelativePath);
+
+    // Save content to the new path
+    fs.writeFileSync(fullNewPath, newFileContent, 'utf8');
+
+    // Delete old file if path has changed
+    if (fullOldPath !== fullNewPath) {
+      try {
+        fs.unlinkSync(fullOldPath);
+      } catch (err) {
+        console.error(`Failed to delete old file: ${err.message}`);
+      }
+    }
+
+    // Update note record metadata
+    note.tags = tags;
+    note.categoryPath = categoryPath;
+    note.filePath = newRelativePath;
+    
+    // Write tree.json back to disk
+    fs.writeFileSync(treePath, JSON.stringify(treeData, null, 2), 'utf8');
+
+    res.json({ success: true, note });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update note metadata: ' + error.message });
+  }
+});
+
 // Serve frontend assets in production with disabled cache headers
 app.use(express.static(path.join(__dirname, '../frontend/dist'), {
   setHeaders: (res, path) => {

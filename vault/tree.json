@@ -3,8 +3,17 @@
     "id": "google_ai_studio_mobile_app_builder_1783018500",
     "title": "Google AI Studio Mobile App Builder",
     "url": "https://www.instagram.com/reels/DaS88C-PUBk/",
-    "tags": ["AI Studio", "No Code", "Mobile App Development", "Vibe Coding", "Antigravity"],
-    "categoryPath": ["AI", "New Tech Stack"],
+    "tags": [
+      "AI Studio",
+      "No Code",
+      "Mobile App Development",
+      "Vibe Coding",
+      "Antigravity"
+    ],
+    "categoryPath": [
+      "AI",
+      "New Tech Stack"
+    ],
     "snippet": "Google's free AI tool inside AI Studio allowing code-free mobile app development powered by the Antigravity agent.",
     "dateProcessed": "2026-07-02 22:15",
     "filePath": "vault/AI/New Tech Stack/google_ai_studio_mobile_app_builder.md",
@@ -14,8 +23,17 @@
     "id": "emergent_ai_lead_gen_crm_1783018500",
     "title": "Emergent AI Lead Gen CRM",
     "url": "https://www.instagram.com/reels/DaShpVEBR_F/",
-    "tags": ["AI Agents", "Lead Generation", "CRM", "Emergent", "Automation"],
-    "categoryPath": ["AI", "CRM Automation"],
+    "tags": [
+      "AI Agents",
+      "Lead Generation",
+      "CRM",
+      "Emergent",
+      "Automation"
+    ],
+    "categoryPath": [
+      "AI",
+      "CRM Automation"
+    ],
     "snippet": "A code-free lead generation tool built on Emergent that pulls alerts from Google Alerts and manages them in a custom CRM.",
     "dateProcessed": "2026-07-02 22:15",
     "filePath": "vault/AI/CRM Automation/emergent_ai_lead_gen_crm.md",
@@ -25,8 +43,16 @@
     "id": "pov_your_wife_is_your_dentist_1783024800",
     "title": "POV: Your Wife is your Dentist",
     "url": "https://www.instagram.com/p/DZm0uXXP1g4/",
-    "tags": ["Dentistry", "Relationship Humor", "POV Meme", "Comedy"],
-    "categoryPath": ["Entertainment", "Dentistry Humor"],
+    "tags": [
+      "Dentistry",
+      "Relationship Humor",
+      "POV Meme",
+      "Comedy"
+    ],
+    "categoryPath": [
+      "Entertainment",
+      "Dentistry Humor"
+    ],
     "snippet": "A humorous POV reel by Dr. Nishu Arora about the power dynamics when your wife is your dentist and holds the drill.",
     "dateProcessed": "2026-07-02 22:42",
     "filePath": "vault/Entertainment/Dentistry Humor/pov_your_wife_is_your_dentist.md",
@@ -36,22 +62,39 @@
     "id": "tradefinder_platform_analysis_strategy_1783025400",
     "title": "TradeFinder Platform Analysis & Strategy",
     "url": "https://www.instagram.com/p/DaSlVcwAku5/",
-    "tags": ["Trading", "Technical Analysis", "Options", "Stock Market", "TradeFinder"],
-    "categoryPath": ["Trading", "Platform Analysis"],
+    "tags": [
+      "Trading",
+      "Technical Analysis",
+      "Options",
+      "Stock Market",
+      "TradeFinder"
+    ],
+    "categoryPath": [
+      "Trading",
+      "Platform Analysis"
+    ],
     "snippet": "A fine-grained study of TradeFinder.in trading features (Option Apex, Swing Spectrum, Market Pulse) and market entry strategy.",
     "dateProcessed": "2026-07-02 22:50",
     "filePath": "vault/Trading/Platform Analysis/tradefinder_platform_analysis_strategy.md",
     "thumbnailUrl": "/api/vault/thumbnails/tradefinder_platform_analysis_strategy.jpg"
   },
   {
-    "id": "google_ai_studio_mobile_app_builder_facebook_version_1783114800",
-    "title": "Google AI Studio Mobile App Builder (Facebook Version)",
+    "id": "untitled_note_1783109756",
+    "title": "Untitled Note",
     "url": "https://www.facebook.com/reel/1342798513890784",
-    "tags": ["AI Studio", "No Code", "Mobile App Development", "Vibe Coding", "Facebook Reel"],
-    "categoryPath": ["AI", "New Tech Stack"],
-    "snippet": "A duplicate of the Google AI Studio Mobile App Builder video uploaded on Facebook by Pooja Kumari, detailing code-free app construction.",
-    "dateProcessed": "2026-07-03 22:58",
-    "filePath": "vault/AI/New Tech Stack/google_ai_studio_mobile_app_builder_facebook_version.md",
-    "thumbnailUrl": "/api/vault/thumbnails/google_ai_studio_mobile_app_builder_facebook_version.jpg"
+    "tags": [
+      "Facebook",
+      "Scraping",
+      "NVIDIA NIM",
+      "Llama3"
+    ],
+    "categoryPath": [
+      "AI",
+      "Facebook Scrapers"
+    ],
+    "snippet": "",
+    "dateProcessed": "2026-07-04 00:15",
+    "filePath": "vault/AI/Facebook Scrapers/untitled_note.md",
+    "thumbnailUrl": "/api/vault/thumbnails/untitled_note.jpg"
   }
 ]

@@ -59,6 +59,14 @@ export default function App() {
   const [consoleLogs, setConsoleLogs] = useState('');
   const [isIngesting, setIsIngesting] = useState(false);
 
+  // Metadata Editor State
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
+  const [editCategorySelect, setEditCategorySelect] = useState('');
+  const [newMainCategory, setNewMainCategory] = useState('');
+  const [newSubCategory, setNewSubCategory] = useState('');
+  const [editTagsInput, setEditTagsInput] = useState('');
+  const [savingMeta, setSavingMeta] = useState(false);
+
   // Authenticate on mount or password change
   useEffect(() => {
     if (password) {
@@ -132,6 +140,14 @@ export default function App() {
     setLoadingNote(true);
     setSelectedNote(note);
     setNoteContent('');
+    
+    // Initialize metadata editor states
+    setIsEditingMeta(false);
+    setEditCategorySelect(note.categoryPath ? note.categoryPath.join(' / ') : 'General');
+    setEditTagsInput(note.tags ? note.tags.join(', ') : '');
+    setNewMainCategory('');
+    setNewSubCategory('');
+
     try {
       const res = await fetch(`${API_URL}/api/vault/${note.filePath.replace('vault/', '')}`, {
         headers: { 'x-app-password': password }
@@ -259,6 +275,73 @@ export default function App() {
     });
     return map;
   }, [notes]);
+
+  // Get list of unique existing category paths in tree.json
+  const existingCategoryPaths = useMemo(() => {
+    const paths = new Set();
+    notes.forEach(note => {
+      if (note.categoryPath && note.categoryPath.length > 0) {
+        paths.add(note.categoryPath.join(' / '));
+      }
+    });
+    return Array.from(paths);
+  }, [notes]);
+
+  const handleSaveMetadata = async () => {
+    if (!selectedNote) return;
+    setSavingMeta(true);
+    
+    let path = [];
+    if (editCategorySelect === 'NEW_CATEGORY') {
+      const main = newMainCategory.trim();
+      const sub = newSubCategory.trim();
+      if (!main) {
+        alert('Please specify at least a Main Category name.');
+        setSavingMeta(false);
+        return;
+      }
+      path = sub ? [main, sub] : [main];
+    } else {
+      path = editCategorySelect.split(' / ').map(p => p.trim());
+    }
+
+    const tags = editTagsInput.split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+
+    try {
+      const res = await fetch(`${API_URL}/api/note/update-metadata`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-app-password': password
+        },
+        body: JSON.stringify({
+          id: selectedNote.id,
+          categoryPath: path,
+          tags: tags
+        })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) {
+          setSelectedNote(result.note);
+          setIsEditingMeta(false);
+          await fetchData();
+        } else {
+          alert('Failed to update metadata.');
+        }
+      } else {
+        const errorData = await res.json();
+        alert('Error updating note: ' + (errorData.error || res.statusText));
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message);
+    } finally {
+      setSavingMeta(false);
+    }
+  };
 
   const toggleCategoryExpand = (root) => {
     setExpandedCategories(prev => ({
@@ -711,61 +794,163 @@ export default function App() {
 
               {/* Right Column: Source Link and Details */}
               <div className="modal-right-pane">
-                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>Source Metadata</h3>
-                  
-                  {/* YouTube Iframe Player if applicable */}
-                  {getYoutubeEmbed(selectedNote.url) ? (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                      <iframe
-                        src={getYoutubeEmbed(selectedNote.url)}
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                        frameBorder="0"
-                        allowFullScreen
+                {isEditingMeta ? (
+                  <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>Edit Metadata</h3>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Category Path</label>
+                      <select 
+                        className="depth-select" 
+                        value={editCategorySelect} 
+                        onChange={(e) => setEditCategorySelect(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px' }}
+                      >
+                        {existingCategoryPaths.map(path => (
+                          <option key={path} value={path}>{path}</option>
+                        ))}
+                        <option value="NEW_CATEGORY">-- Create New Category --</option>
+                      </select>
+                    </div>
+
+                    {editCategorySelect === 'NEW_CATEGORY' && (
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                          <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Main Category</label>
+                          <input 
+                            type="text" 
+                            className="url-input" 
+                            placeholder="e.g. AI" 
+                            value={newMainCategory} 
+                            onChange={(e) => setNewMainCategory(e.target.value)} 
+                            style={{ padding: '10px 12px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                          <label style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Subcategory</label>
+                          <input 
+                            type="text" 
+                            className="url-input" 
+                            placeholder="e.g. Agents" 
+                            value={newSubCategory} 
+                            onChange={(e) => setNewSubCategory(e.target.value)} 
+                            style={{ padding: '10px 12px' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Tags (comma-separated)</label>
+                      <input 
+                        type="text" 
+                        className="url-input" 
+                        placeholder="e.g. Option Trading, Stocks" 
+                        value={editTagsInput} 
+                        onChange={(e) => setEditTagsInput(e.target.value)} 
+                        style={{ width: '100%', padding: '10px 12px' }}
                       />
                     </div>
-                  ) : (
-                    // Instagram Thumbnail and redirect
-                    selectedNote.thumbnailUrl && (
-                      <div style={{ height: '200px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                        <img 
-                          src={getThumbnailUrl(selectedNote.thumbnailUrl)} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          alt="Thumbnail preview"
-                        />
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                      <button 
+                        type="button" 
+                        className="action-btn" 
+                        style={{ flex: 1, justifyContent: 'center' }} 
+                        onClick={handleSaveMetadata}
+                        disabled={savingMeta}
+                      >
+                        {savingMeta ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <button 
+                        type="button" 
+                        className="action-btn" 
+                        style={{ flex: 1, justifyContent: 'center', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }} 
+                        onClick={() => setIsEditingMeta(false)}
+                        disabled={savingMeta}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700 }}>Source Metadata</h3>
+                      
+                      {/* YouTube Iframe Player if applicable */}
+                      {getYoutubeEmbed(selectedNote.url) ? (
+                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                          <iframe
+                            src={getYoutubeEmbed(selectedNote.url)}
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                            frameBorder="0"
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : (
+                        // Instagram Thumbnail and redirect
+                        selectedNote.thumbnailUrl && (
+                          <div style={{ height: '200px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                            <img 
+                              src={getThumbnailUrl(selectedNote.thumbnailUrl)} 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              alt="Thumbnail preview"
+                            />
+                          </div>
+                        )
+                      )}
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 13 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Source Link:</span>
+                          <a href={selectedNote.url} target="_blank" rel="noopener noreferrer" style={{ color: '#c084fc', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span>Open Video</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Processed At:</span>
+                          <span style={{ color: 'var(--text-primary)' }}>{selectedNote.dateProcessed}</span>
+                        </div>
                       </div>
-                    )
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 13 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Source Link:</span>
-                      <a href={selectedNote.url} target="_blank" rel="noopener noreferrer" style={{ color: '#c084fc', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <span>Open Video</span>
-                        <ExternalLink size={12} />
-                      </a>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Processed At:</span>
-                      <span style={{ color: 'var(--text-primary)' }}>{selectedNote.dateProcessed}</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="glass-panel" style={{ padding: '24px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700 }}>Keywords & Taxonomy</h3>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {selectedNote.tags.map(tag => (
-                      <span key={tag} className="tag-badge" style={{ fontSize: 12 }}>{tag}</span>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: '16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    <p style={{ fontWeight: 600, color: '#fff', marginBottom: '6px' }}>Folder Location:</p>
-                    <code style={{ background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '6px', display: 'block', wordBreak: 'break-all' }}>
-                      {selectedNote.filePath}
-                    </code>
-                  </div>
-                </div>
+                    <div className="glass-panel" style={{ padding: '24px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700 }}>Keywords & Taxonomy</h3>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {selectedNote.tags.length > 0 ? (
+                          selectedNote.tags.map(tag => (
+                            <span key={tag} className="tag-badge" style={{ fontSize: 12 }}>{tag}</span>
+                          ))
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>No tags assigned</span>
+                        )}
+                      </div>
+                      <div style={{ marginTop: '16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        <p style={{ fontWeight: 600, color: '#fff', marginBottom: '6px' }}>Folder Location:</p>
+                        <code style={{ background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '6px', display: 'block', wordBreak: 'break-all' }}>
+                          {selectedNote.filePath}
+                        </code>
+                      </div>
+                      
+                      <button 
+                        className="action-btn"
+                        style={{
+                          width: '100%',
+                          marginTop: '20px',
+                          background: 'rgba(139, 92, 246, 0.15)',
+                          color: '#c084fc',
+                          border: '1px solid rgba(139, 92, 246, 0.3)',
+                          justifyContent: 'center'
+                        }}
+                        onClick={() => setIsEditingMeta(true)}
+                      >
+                        ✏️ Edit Classification & Tags
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
