@@ -839,6 +839,10 @@ body {
     align-items: stretch;
   }
 
+  .mobile-hide-divider {
+    display: none !important;
+  }
+
   .url-input {
     width: 100%;
     padding: 12px 16px;

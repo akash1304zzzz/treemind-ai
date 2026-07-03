@@ -538,12 +538,12 @@ export default function App() {
 
         {/* Queue URL Paste Box */}
         <section className="paste-container glass-panel">
-          <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center' }}>
+          <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Plus size={20} color="var(--text-muted)" />
             <input 
               type="url" 
               className="url-input"
-              placeholder="Paste Instagram Reel or YouTube URL here..." 
+              placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..." 
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
               required
@@ -559,6 +559,21 @@ export default function App() {
             </select>
             <button type="submit" className="action-btn">
               Queue Ingest
+            </button>
+            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
+            <button 
+              type="button"
+              className="action-btn"
+              style={{
+                background: isIngesting ? '#7c3aed' : 'rgba(236, 72, 153, 0.15)',
+                border: '1px solid rgba(236, 72, 153, 0.3)',
+                color: '#f472b6',
+              }}
+              onClick={triggerIngestion}
+              disabled={isIngesting}
+            >
+              <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
+              <span>{isIngesting ? 'Processing Ingestion...' : 'Process Queue'}</span>
             </button>
           </form>
         </section>
