@@ -210,6 +210,31 @@ body {
   margin-bottom: 6px;
 }
 
+.sub-cat-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+}
+
+.cat-rename-icon-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.cat-rename-icon-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+  color: #c084fc;
+}
+
 .sub-cat-btn {
   width: 100%;
   padding: 8px 12px;
@@ -383,7 +408,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 390px;
+  min-height: 180px;
+  height: auto;
   cursor: pointer;
   transition: all var(--transition-normal);
   background-image: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);

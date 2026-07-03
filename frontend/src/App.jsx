@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Sliders,
   CheckCircle,
-  FileText
+  FileText,
+  Edit2
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
@@ -343,6 +344,54 @@ export default function App() {
     }
   };
 
+  const handleRenameCategory = async (oldPath) => {
+    const oldPathStr = oldPath.join(' / ');
+    const newName = prompt(`Rename category "${oldPathStr}" to:`, oldPath[oldPath.length - 1]);
+    
+    if (newName === null) return; // user cancelled
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      alert('Category name cannot be empty.');
+      return;
+    }
+    if (trimmed === oldPath[oldPath.length - 1]) return; // no change
+
+    const newPath = [...oldPath];
+    newPath[newPath.length - 1] = trimmed;
+
+    try {
+      const res = await fetch(`${API_URL}/api/category/rename`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-app-password': password
+        },
+        body: JSON.stringify({ oldPath, newPath })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (activeCategory && activeCategory.root === oldPath[0]) {
+            if (oldPath.length === 1) {
+              setActiveCategory({ root: trimmed, sub: activeCategory.sub });
+            } else if (oldPath.length === 2 && activeCategory.sub === oldPath[1]) {
+              setActiveCategory({ root: activeCategory.root, sub: trimmed });
+            }
+          }
+          await fetchData();
+        } else {
+          alert('Failed to rename category.');
+        }
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || res.statusText));
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message);
+    }
+  };
+
   const toggleCategoryExpand = (root) => {
     setExpandedCategories(prev => ({
       ...prev,
@@ -506,6 +555,16 @@ export default function App() {
                   >
                     <span>{root}</span>
                   </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRenameCategory([root]);
+                    }}
+                    className="cat-rename-icon-btn"
+                    title={`Rename category ${root}`}
+                  >
+                    <Edit2 size={12} />
+                  </button>
                   {subs.length > 0 && (
                     <button 
                       onClick={() => toggleCategoryExpand(root)}
@@ -527,14 +586,26 @@ export default function App() {
                     {subs.map((sub) => {
                       const isSubActive = activeCategory?.root === root && activeCategory?.sub === sub;
                       return (
-                        <button
-                          key={sub}
-                          className={`sub-cat-btn ${isSubActive ? 'active' : ''}`}
-                          onClick={() => setActiveCategory({ root, sub })}
-                        >
-                          <ChevronRight size={10} />
-                          <span>{sub}</span>
-                        </button>
+                        <div key={sub} className="sub-cat-row">
+                          <button
+                            className={`sub-cat-btn ${isSubActive ? 'active' : ''}`}
+                            style={{ flexGrow: 1 }}
+                            onClick={() => setActiveCategory({ root, sub })}
+                          >
+                            <ChevronRight size={10} />
+                            <span>{sub}</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRenameCategory([root, sub]);
+                            }}
+                            className="cat-rename-icon-btn"
+                            title={`Rename subcategory ${sub}`}
+                          >
+                            <Edit2 size={10} />
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -677,53 +748,47 @@ export default function App() {
             <div className="grid-layout">
               {filteredNotes.map((note) => {
                 const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
+                const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
                 return (
                   <div 
                     key={note.id} 
                     className="clip-card glass-panel"
                     onClick={() => loadNoteContent(note)}
                   >
-                    <div className="clip-thumbnail-wrapper">
-                      {note.thumbnailUrl ? (
-                        <img 
-                          src={getThumbnailUrl(note.thumbnailUrl)} 
-                          className="clip-thumbnail" 
-                          alt={note.title}
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(135deg, #1f1832, #0d0f14)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <FileText size={32} color="rgba(255,255,255,0.15)" />
+                    <div className="clip-card-body" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                          <span style={{ fontSize: 10, color: '#a78bfa', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            {isYoutube ? 'YouTube' : isFacebook ? 'Facebook' : 'Instagram'}
+                          </span>
+                          <span className="clip-date" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{note.dateProcessed}</span>
                         </div>
-                      )}
-                      <span className="clip-platform-badge">
-                        {isYoutube ? 'YouTube' : 'Instagram'}
-                      </span>
-                    </div>
-
-                    <div className="clip-card-body">
-                      <h3 className="clip-title">{note.title}</h3>
-                      <p className="clip-snippet">{note.snippet}</p>
-                      
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                        {note.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className="tag-badge">{tag}</span>
-                        ))}
+                        <h3 className="clip-title" style={{ marginTop: '4px', fontSize: 16, lineHeight: 1.4, color: 'var(--text-primary)', fontWeight: 600 }}>{note.title}</h3>
+                        <p className="clip-snippet" style={{ color: 'var(--text-secondary)', fontSize: 13, display: '-webkit-box', WebKitLineClamp: 3, WebKitBoxOrient: 'vertical', overflow: 'hidden', margin: '8px 0 16px 0', lineHeight: 1.5 }}>
+                          {note.snippet || 'No description preview available.'}
+                        </p>
                       </div>
+                      
+                      <div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                          {note.tags && note.tags.length > 0 ? (
+                            note.tags.slice(0, 4).map(tag => (
+                              <span key={tag} className="tag-badge" style={{ fontSize: 11 }}>{tag}</span>
+                            ))
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: 11, fontStyle: 'italic' }}>No tags</span>
+                          )}
+                        </div>
 
-                      <div className="clip-footer">
-                        <span className="clip-date">{note.dateProcessed}</span>
-                        <span style={{ fontSize: 11, color: '#8b5cf6', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span>Read Note</span>
-                          <ChevronRight size={12} />
-                        </span>
+                        <div className="clip-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="tag-badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {note.categoryPath ? note.categoryPath.join(' › ') : 'General'}
+                          </span>
+                          <span style={{ fontSize: 11, color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>Read Note</span>
+                            <ChevronRight size={12} />
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

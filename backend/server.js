@@ -272,6 +272,90 @@ app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
   }
 });
 
+// 8. Rename Category (Mass Relocation)
+app.post('/api/category/rename', authMiddleware, (req, res) => {
+  const { oldPath, newPath } = req.body;
+  
+  if (!oldPath || !Array.isArray(oldPath) || !newPath || !Array.isArray(newPath)) {
+    return res.status(400).json({ error: 'Missing or invalid parameters.' });
+  }
+
+  const treePath = path.join(__dirname, '../vault/tree.json');
+  if (!fs.existsSync(treePath)) {
+    return res.status(404).json({ error: 'Vault tree index file not found.' });
+  }
+
+  try {
+    const content = fs.readFileSync(treePath, 'utf8');
+    const treeData = JSON.parse(content);
+    
+    let renamedCount = 0;
+
+    treeData.forEach(note => {
+      // Check if note's categoryPath starts with oldPath
+      const matches = oldPath.every((val, index) => note.categoryPath && note.categoryPath[index] === val);
+      if (matches) {
+        const suffix = note.categoryPath.slice(oldPath.length);
+        const updatedCategoryPath = [...newPath, ...suffix];
+        
+        const oldRelativePath = note.filePath;
+        const fullOldPath = path.join(__dirname, '..', oldRelativePath);
+        
+        if (fs.existsSync(fullOldPath)) {
+          // Read markdown content and replace frontmatter category variable
+          let fileContent = fs.readFileSync(fullOldPath, 'utf8');
+          const matchFM = fileContent.match(/^---([\s\S]*?)---\n*([\s\S]*)$/);
+          let newFileContent = fileContent;
+          
+          if (matchFM) {
+            const frontmatterText = matchFM[1];
+            const markdownBody = matchFM[2];
+            const lines = frontmatterText.split('\n');
+            const updatedLines = lines.map(line => {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('category:')) {
+                return `category: "${updatedCategoryPath.join(' / ')}"`;
+              }
+              return line;
+            });
+            newFileContent = `---\n${updatedLines.join('\n')}\n---\n\n${markdownBody.trim()}\n`;
+          }
+          
+          // Write to the new folder path
+          const newDir = path.join(__dirname, '../vault', ...updatedCategoryPath);
+          fs.mkdirSync(newDir, { recursive: true });
+          
+          const filename = path.basename(oldRelativePath);
+          const newRelativePath = path.join('vault', ...updatedCategoryPath, filename).replace(/\\/g, '/');
+          const fullNewPath = path.join(__dirname, '..', newRelativePath);
+          
+          fs.writeFileSync(fullNewPath, newFileContent, 'utf8');
+          
+          // Delete old file if path has changed
+          if (fullOldPath !== fullNewPath) {
+            try {
+              fs.unlinkSync(fullOldPath);
+            } catch (err) {
+              console.error(`Failed to delete old file: ${err.message}`);
+            }
+          }
+          
+          // Update note metadata
+          note.categoryPath = updatedCategoryPath;
+          note.filePath = newRelativePath;
+          renamedCount++;
+        }
+      }
+    });
+
+    // Write tree.json back to disk
+    fs.writeFileSync(treePath, JSON.stringify(treeData, null, 2), 'utf8');
+    res.json({ success: true, renamedCount });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to rename category: ' + error.message });
+  }
+});
+
 // Serve frontend assets in production with disabled cache headers
 app.use(express.static(path.join(__dirname, '../frontend/dist'), {
   setHeaders: (res, path) => {
