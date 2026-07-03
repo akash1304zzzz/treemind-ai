@@ -1,0 +1,23 @@
+{
+  "appId": "com.remindai.app",
+  "appName": "Remind AI",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "StatusBar": {
+      "backgroundColor": "#090812",
+      "style": "DARK",
+      "overlaysWebView": false
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 2000,
+      "backgroundColor": "#090812",
+      "showSpinner": true,
+      "spinnerColor": "#8b5cf6"
+    }
+  }
+}

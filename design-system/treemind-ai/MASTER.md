@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** TreeMind AI
+**Project:** Remind AI
 **Generated:** 2026-07-02 23:00:26
 **Category:** Remote Work/Collaboration Tool
 

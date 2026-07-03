@@ -21,7 +21,15 @@ import {
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
-const API_URL = window.location.port === '5173' ? 'http://localhost:5000' : '';
+// Capacitor Android: app runs from local assets, needs explicit backend URL
+// Users set their server IP in Settings; stored in localStorage as 'remindai_server_url'
+const isCapacitor = window.Capacitor !== undefined;
+const storedServerUrl = localStorage.getItem('remindai_server_url');
+const API_URL = storedServerUrl
+  ? storedServerUrl
+  : isCapacitor
+    ? '' // Will prompt user to set server URL in settings
+    : window.location.port === '5173' ? 'http://localhost:5000' : '';
 
 export default function App() {
   // Authentication State
@@ -53,6 +61,7 @@ export default function App() {
   const [nvidiaKey, setNvidiaKey] = useState('');
   const [apifyToken, setApifyToken] = useState('');
   const [newAppPassword, setNewAppPassword] = useState('');
+  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('remindai_server_url') || '');
   const [settingsStatus, setSettingsStatus] = useState('');
 
   // Logs & Ingestion Console State
@@ -490,7 +499,7 @@ export default function App() {
           <div className="logo-icon" style={{ margin: '0 auto 16px auto' }}>
             <Lock size={20} color="#fff" />
           </div>
-          <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>TreeMind AI</h2>
+          <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>Remind AI</h2>
           <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter password to access local PKM Vault</p>
           <form onSubmit={handleLoginSubmit}>
             <input 
@@ -526,7 +535,7 @@ export default function App() {
           <div className="logo-icon">
             <Sliders size={18} color="#fff" />
           </div>
-          <span className="logo-text">TreeMind AI</span>
+          <span className="logo-text">Remind AI</span>
         </div>
 
         <div className="nav-buttons-container">
@@ -1035,6 +1044,19 @@ export default function App() {
 
             <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
               <div className="settings-field">
+                <label>Server URL (for mobile app)</label>
+                <input 
+                  type="url"
+                  className="url-input"
+                  placeholder="e.g. http://192.168.1.100:5000"
+                  value={serverUrl}
+                  onChange={(e) => setServerUrl(e.target.value)}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Set this to your PC's local IP if using the Android app
+                </span>
+              </div>
+              <div className="settings-field">
                 <label>Google Gemini API Key</label>
                 <input 
                   type="password"
@@ -1088,7 +1110,14 @@ export default function App() {
                 </p>
               )}
 
-              <button type="submit" className="action-btn" style={{ marginTop: '8px', justifyContent: 'center' }}>
+              <button type="submit" className="action-btn" style={{ marginTop: '8px', justifyContent: 'center' }} onClick={() => {
+                // Save server URL to localStorage (handled client-side, not sent to backend)
+                if (serverUrl) {
+                  localStorage.setItem('remindai_server_url', serverUrl.replace(/\/$/, ''));
+                } else {
+                  localStorage.removeItem('remindai_server_url');
+                }
+              }}>
                 Save Settings
               </button>
             </form>

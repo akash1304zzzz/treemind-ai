@@ -1,9 +1,11 @@
 ---
+
 title: "POV: Your Wife is your Dentist"
 source: https://www.instagram.com/p/DZm0uXXP1g4/
 date_processed: 2026-07-02 22:42
 tags: ["Dentistry", "Relationship Humor", "POV Meme", "Comedy"]
-category: "Entertainment / Dentistry Humor"
+category: "Knowledge / Dentistry Humor"
+
 ---
 
 # POV: Your Wife is your Dentist
