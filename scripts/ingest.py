@@ -111,6 +111,64 @@ def download_instagram_via_apify(url, api_token, output_dir="temp_videos"):
         logger.error(f"Apify download failed: {e}")
         return None, None
 
+def download_facebook_via_apify(url, api_token, output_dir="temp_videos"):
+    logger.info(f"Scraping Facebook URL via Apify: {url}")
+    try:
+        from apify_client import ApifyClient
+        apify_client = ApifyClient(api_token)
+        
+        run_input = {
+            "startUrls": [{"url": url}],
+            "resultsLimit": 1
+        }
+        
+        run = apify_client.actor("apify/facebook-reels-scraper").call(run_input=run_input)
+        dataset_id = getattr(run, "default_dataset_id", None)
+        if not dataset_id and isinstance(run, dict):
+            dataset_id = run.get("default_dataset_id") or run.get("defaultDatasetId")
+            
+        if not dataset_id:
+            logger.error("Could not retrieve dataset ID from Apify Run.")
+            return None, None
+            
+        dataset_items = apify_client.dataset(dataset_id).list_items().items
+        if not dataset_items:
+            logger.error("Apify returned no results.")
+            return None, None
+            
+        item = dataset_items[0]
+        video_url = item.get("videoUrl") or item.get("video_url") or item.get("video")
+        thumbnail_url = item.get("thumbnail") or item.get("thumbnailUrl") or item.get("thumbnail_url") or item.get("image")
+        caption = item.get("caption") or item.get("text") or item.get("description") or ""
+        owner = item.get("ownerUsername") or item.get("author") or item.get("pageName") or "Unknown"
+        
+        scraped_meta = {
+            "caption": caption,
+            "ownerUsername": owner,
+            "displayUrl": thumbnail_url,
+            "videoUrl": video_url
+        }
+        
+        if not video_url:
+            logger.warning("No direct videoUrl found in Apify output.")
+            return None, scraped_meta
+            
+        os.makedirs(output_dir, exist_ok=True)
+        short_id = item.get("id", f"fb_{int(time.time())}")
+        filename = os.path.join(output_dir, f"facebook_{short_id}.mp4")
+        
+        logger.info(f"Downloading video to {filename}...")
+        r = requests.get(video_url, stream=True)
+        r.raise_for_status()
+        with open(filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+                
+        return filename, scraped_meta
+    except Exception as e:
+        logger.error(f"Apify Facebook download failed: {e}")
+        return None, None
+
 def download_youtube_via_ytdlp(url, output_dir="temp_videos"):
     logger.info(f"Downloading YouTube URL via yt-dlp: {url}")
     os.makedirs(output_dir, exist_ok=True)
@@ -233,6 +291,12 @@ def main():
                 video_path, scraped_meta = download_instagram_via_apify(url, apify_token)
             else:
                 logger.warning("Instagram URL detected but APIFY_TOKEN is missing. Attempting yt-dlp.")
+                video_path, scraped_meta = download_youtube_via_ytdlp(url)
+        elif "facebook.com" in url.lower() or "fb.watch" in url.lower() or "fb.com" in url.lower():
+            if apify_token:
+                video_path, scraped_meta = download_facebook_via_apify(url, apify_token)
+            else:
+                logger.warning("Facebook URL detected but APIFY_TOKEN is missing. Attempting yt-dlp.")
                 video_path, scraped_meta = download_youtube_via_ytdlp(url)
         else:
             video_path, scraped_meta = download_youtube_via_ytdlp(url)
