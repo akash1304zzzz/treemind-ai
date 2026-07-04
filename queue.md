@@ -1,4 +1,4 @@
-# Remind AI Ingestion Queue
+# TreeMind AI Ingestion Queue
 
 - [x] https://www.instagram.com/reels/DaS88C-PUBk/ (Processed: 2026-07-02 22:15) (Depth: Detailed Notes)
 - [x] https://www.instagram.com/reels/DaShpVEBR_F/ (Processed: 2026-07-02 22:15) (Depth: Quick Summary)

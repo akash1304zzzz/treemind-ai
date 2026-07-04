@@ -3,7 +3,7 @@
     "video-extractor": {
       "command": "python",
       "args": [
-        "d:/Antigravity_IDE/remindai/scripts/extractor.py"
+        "d:/Antigravity_IDE/treemindai/scripts/extractor.py"
       ],
       "env": {
         "PYTHONUNBUFFERED": "1"

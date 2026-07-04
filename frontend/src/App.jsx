@@ -22,9 +22,9 @@ import {
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
 // Capacitor Android: app runs from local assets, needs explicit backend URL
-// Users set their server IP in Settings; stored in localStorage as 'remindai_server_url'
+// Users set their server IP in Settings; stored in localStorage as 'treemind_server_url'
 const isCapacitor = window.Capacitor !== undefined;
-const storedServerUrl = localStorage.getItem('remindai_server_url');
+const storedServerUrl = localStorage.getItem('treemind_server_url');
 const API_URL = storedServerUrl
   ? storedServerUrl
   : isCapacitor
@@ -61,7 +61,7 @@ export default function App() {
   const [nvidiaKey, setNvidiaKey] = useState('');
   const [apifyToken, setApifyToken] = useState('');
   const [newAppPassword, setNewAppPassword] = useState('');
-  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('remindai_server_url') || '');
+  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('treemind_server_url') || '');
   const [settingsStatus, setSettingsStatus] = useState('');
 
   // Logs & Ingestion Console State
@@ -499,7 +499,7 @@ export default function App() {
           <div className="logo-icon" style={{ margin: '0 auto 16px auto' }}>
             <Lock size={20} color="#fff" />
           </div>
-          <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>Remind AI</h2>
+          <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>TreeMind AI</h2>
           <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter password to access local PKM Vault</p>
           <form onSubmit={handleLoginSubmit}>
             <input 
@@ -535,7 +535,7 @@ export default function App() {
           <div className="logo-icon">
             <Sliders size={18} color="#fff" />
           </div>
-          <span className="logo-text">Remind AI</span>
+          <span className="logo-text">TreeMind AI</span>
         </div>
 
         <div className="nav-buttons-container">
@@ -1113,9 +1113,9 @@ export default function App() {
               <button type="submit" className="action-btn" style={{ marginTop: '8px', justifyContent: 'center' }} onClick={() => {
                 // Save server URL to localStorage (handled client-side, not sent to backend)
                 if (serverUrl) {
-                  localStorage.setItem('remindai_server_url', serverUrl.replace(/\/$/, ''));
+                  localStorage.setItem('treemind_server_url', serverUrl.replace(/\/$/, ''));
                 } else {
-                  localStorage.removeItem('remindai_server_url');
+                  localStorage.removeItem('treemind_server_url');
                 }
               }}>
                 Save Settings

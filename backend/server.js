@@ -8,8 +8,8 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Default password is 'remindai123' if not set in .env
-const APP_PASSWORD = process.env.APP_PASSWORD || 'remindai123';
+// Default password is 'treemind123' if not set in .env
+const APP_PASSWORD = process.env.APP_PASSWORD || 'treemind123';
 
 app.use(cors());
 app.use(express.json());
@@ -378,5 +378,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[Remind AI Local Server] running on http://localhost:${PORT}`);
+  console.log(`[TreeMind AI Local Server] running on http://localhost:${PORT}`);
 });

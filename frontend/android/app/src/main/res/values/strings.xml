@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Remind AI</string>
-    <string name="title_activity_main">Remind AI</string>
-    <string name="package_name">com.remindai.app</string>
-    <string name="custom_url_scheme">com.remindai.app</string>
+    <string name="app_name">TreeMind AI</string>
+    <string name="title_activity_main">TreeMind AI</string>
+    <string name="package_name">com.treemindai.app</string>
+    <string name="custom_url_scheme">com.treemindai.app</string>
 </resources>

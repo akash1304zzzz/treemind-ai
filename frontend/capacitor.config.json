@@ -1,6 +1,6 @@
 {
-  "appId": "com.remindai.app",
-  "appName": "Remind AI",
+  "appId": "com.treemindai.app",
+  "appName": "TreeMind AI",
   "webDir": "dist",
   "server": {
     "androidScheme": "https",

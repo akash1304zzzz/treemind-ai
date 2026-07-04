@@ -1,4 +1,4 @@
-package com.remindai.app;
+package com.treemindai.app;
 
 import com.getcapacitor.BridgeActivity;
 

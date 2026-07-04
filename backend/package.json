@@ -1,7 +1,7 @@
 {
-  "name": "remindai-backend",
+  "name": "treemindai-backend",
   "version": "1.0.0",
-  "description": "Local server for Remind AI",
+  "description": "Local server for TreeMind AI",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

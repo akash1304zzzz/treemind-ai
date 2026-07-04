@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    name: Build Remind AI APK
+    name: Build TreeMind AI APK
     runs-on: ubuntu-latest
 
     steps:
@@ -21,11 +21,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Set up Java (JDK 17)
+      - name: Set up Java (JDK 21)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -50,7 +50,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: remind-ai-debug-apk
+          name: treemind-ai-debug-apk
           path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 90
 
@@ -59,9 +59,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v0.1.0-${{ github.run_number }}
-          name: "Remind AI v0.1.0 (Build #${{ github.run_number }})"
+          name: "TreeMind AI v0.1.0 (Build #${{ github.run_number }})"
           body: |
-            ## Remind AI - Android APK
+            ## TreeMind AI - Android APK
 
             📱 **Download the APK below** and install it on your Android phone.
 
@@ -70,9 +70,9 @@ jobs:
             ### How to use:
             1. Download `app-debug.apk` from the Assets section below
             2. Open the file on your phone to install
-            3. Launch "Remind AI"
+            3. Launch "TreeMind AI"
             4. Go to **Settings** and set your **Server URL** to your PC's local IP (e.g. `http://192.168.1.100:5000`)
-            5. Enter your password (default: `remindai123`)
+            5. Enter your password (default: `treemind123`)
           files: frontend/android/app/build/outputs/apk/debug/app-debug.apk
           draft: false
           prerelease: true
