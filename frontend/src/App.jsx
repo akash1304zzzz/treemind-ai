@@ -95,6 +95,7 @@ export default function App() {
       });
       if (res.ok) {
         setIsAuthenticated(true);
+        setPassword(pass);
         localStorage.setItem('tm_password', pass);
         fetchData(pass);
       } else {
@@ -159,8 +160,10 @@ export default function App() {
     setNewSubCategory('');
 
     try {
-      const res = await fetch(`${API_URL}/api/vault/${note.filePath.replace('vault/', '')}`, {
-        headers: { 'x-app-password': password }
+      const cleanPath = note.filePath.replace('vault/', '');
+      const encodedPath = encodeURIComponent(cleanPath).replace(/%2F/g, '/');
+      const res = await fetch(`${API_URL}/api/vault/${encodedPath}`, {
+        headers: { 'x-app-password': password || pass } // fallback to local pass if state hasn't updated yet
       });
       if (res.ok) {
         const text = await res.text();
