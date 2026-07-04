@@ -165,9 +165,11 @@ app.post('/api/ingest', authMiddleware, (req, res) => {
   console.log('Triggering queue ingestion process...');
   const ingestScript = path.join(__dirname, '../scripts/ingest.py');
   
-  exec(`python "${ingestScript}"`, { env: process.env }, (error, stdout, stderr) => {
+  exec(`python "${ingestScript}"`, { env: process.env, cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Ingestion error: ${error.message}`);
+      console.error(`stdout: ${stdout}`);
+      console.error(`stderr: ${stderr}`);
       return res.status(500).json({ 
         success: false, 
         error: error.message,

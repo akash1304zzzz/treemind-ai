@@ -10,3 +10,7 @@
 - [x] https://www.instagram.com/reels/DaS88C-PUBk/ (Processed: 2026-07-04 00:38) (Depth: Detailed Notes)
 - [x] https://www.instagram.com/reels/DaS88C-PUBk/ (Processed: 2026-07-05 01:39) (Depth: Detailed Notes)
 
+- [x] https://www.instagram.com/reel/DHTfK7jAih8/?igsh=ZGxrbnZyaTlxcWhm (Processed: 2026-07-05 01:48) (Depth: Detailed Notes)
+- [x] https://www.instagram.com/p/DaSlVcwAku5/ (Processed: 2026-07-05 01:51) (Depth: Quick Summary)
+- [x] https://www.instagram.com/reel/DaShpVEBR_F/ (Processed: 2026-07-05 01:56) (Depth: Quick Summary)
+
