@@ -56,7 +56,8 @@ def download_thumbnail(url, note_title, vault_path):
                 f.write(chunk)
                 
         # Return path that the backend static endpoint serves
-        return f"/api/vault/thumbnails/{filename}"
+        normalized_vault = vault_path.replace("\\", "/").strip("/")
+        return f"/api/{normalized_vault}/thumbnails/{filename}"
     except Exception as e:
         logger.error(f"Failed to download thumbnail: {e}")
         return url

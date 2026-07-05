@@ -16,3 +16,5 @@
 
 - [x] https://www.instagram.com/reel/DHTfK7jAih8/ (Processed: 2026-07-05 09:10) (Depth: Detailed Notes)
 - [x] https://www.instagram.com/reel/DHTfK7jAih8/ (Processed: 2026-07-05 10:14) (Depth: Detailed Notes)
+- [x] https://www.instagram.com/reel/DaO8ZDctQcM/?igsh=MW13c3F6MHlkNmRkdA== (Processed: 2026-07-05 14:57) (Depth: Detailed Notes)
+- [x] https://www.instagram.com/reel/DYwORJEhtaS/?igsh=c3U0c3R1ajVzNmRq (Processed: 2026-07-05 15:20) (Depth: Detailed Notes)

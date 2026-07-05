@@ -28,9 +28,11 @@ const isCapacitor = window.Capacitor !== undefined;
 export default function App() {
   // Authentication State
   const [password, setPassword] = useState(() => localStorage.getItem('tm_password') || '');
+  const [userId, setUserId] = useState(() => localStorage.getItem('tm_user_id') || 'default');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [userIdInput, setUserIdInput] = useState(() => localStorage.getItem('tm_user_id') || '');
 
   // App Data State
   const [notes, setNotes] = useState([]);
@@ -79,13 +81,13 @@ export default function App() {
   // Authenticate on mount or password change
   useEffect(() => {
     if (password) {
-      verifyPassword(password);
+      verifyPassword(password, userId);
     } else {
       setLoading(false);
     }
   }, [password]);
 
-  const verifyPassword = async (pass) => {
+  const verifyPassword = async (pass, usrId = userId) => {
     if (isCapacitor && !API_URL) {
       setLoginError('Please configure your Server URL using the button below.');
       return;
@@ -93,14 +95,19 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': usrId
+        },
         body: JSON.stringify({ password: pass })
       });
       if (res.ok) {
         setIsAuthenticated(true);
         setPassword(pass);
+        setUserId(usrId);
         localStorage.setItem('tm_password', pass);
-        fetchData(pass);
+        localStorage.setItem('tm_user_id', usrId);
+        fetchData(pass, usrId);
       } else {
         setLoginError('Invalid application password.');
         setIsAuthenticated(false);
@@ -114,7 +121,7 @@ export default function App() {
 
   const handleLoginSubmit = (e) => {
     e.preventDefault();
-    verifyPassword(passwordInput);
+    verifyPassword(passwordInput, userIdInput || 'default');
   };
 
   const handleLogout = () => {
@@ -124,10 +131,13 @@ export default function App() {
   };
 
   // Fetch Notes & Queue
-  const fetchData = async (pass = password) => {
+  const fetchData = async (pass = password, usrId = userId) => {
     setLoading(true);
     try {
-      const headers = { 'x-app-password': pass };
+      const headers = { 
+        'x-app-password': pass,
+        'x-user-id': usrId
+      };
       
       const [notesRes, queueRes] = await Promise.all([
         fetch(`${API_URL}/api/tree`, { headers }),
@@ -166,7 +176,10 @@ export default function App() {
       const cleanPath = note.filePath.replace('vault/', '');
       const encodedPath = encodeURIComponent(cleanPath).replace(/%2F/g, '/');
       const res = await fetch(`${API_URL}/api/vault/${encodedPath}`, {
-        headers: { 'x-app-password': password || pass } // fallback to local pass if state hasn't updated yet
+        headers: { 
+          'x-app-password': password,
+          'x-user-id': userId
+        }
       });
       if (res.ok) {
         const text = await res.text();
@@ -193,7 +206,8 @@ export default function App() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-app-password': password
+          'x-app-password': password,
+          'x-user-id': userId
         },
         body: JSON.stringify({ url: newUrl, depth })
       });
@@ -220,7 +234,10 @@ export default function App() {
     try {
       const res = await fetch(`${API_URL}/api/ingest`, {
         method: 'POST',
-        headers: { 'x-app-password': password }
+        headers: { 
+          'x-app-password': password,
+          'x-user-id': userId
+        }
       });
       const data = await res.json();
       
@@ -356,7 +373,8 @@ export default function App() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-app-password': password
+          'x-app-password': password,
+          'x-user-id': userId
         },
         body: JSON.stringify({
           id: selectedNote.id,
@@ -405,7 +423,8 @@ export default function App() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-app-password': password
+          'x-app-password': password,
+          'x-user-id': userId
         },
         body: JSON.stringify({ oldPath, newPath })
       });
@@ -538,17 +557,26 @@ export default function App() {
             <div className="logo-icon" style={{ margin: '0 auto 16px auto' }}>
               <Lock size={20} color="#fff" />
             </div>
-            <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>TreeMind AI</h2>
-            <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter password to access local PKM Vault</p>
+            <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>Remind AI</h2>
+            <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter credentials to access local PKM Vault</p>
             <form onSubmit={handleLoginSubmit}>
+              <input 
+                type="text" 
+                className="lock-input"
+                placeholder="User ID (e.g. user_1)"
+                value={userIdInput}
+                onChange={(e) => setUserIdInput(e.target.value)}
+                required
+                style={{ marginTop: 20, marginBottom: 8 }}
+              />
               <input 
                 type="password" 
                 className="lock-input"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 required
-                autoFocus
+                style={{ marginTop: 8, marginBottom: 16 }}
               />
               {loginError && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 16 }}>{loginError}</p>}
               <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
@@ -635,7 +663,7 @@ export default function App() {
           <div className="logo-icon">
             <Sliders size={18} color="#fff" />
           </div>
-          <span className="logo-text">TreeMind AI</span>
+          <span className="logo-text">Remind AI</span>
         </div>
 
         <div className="nav-buttons-container">
@@ -725,36 +753,58 @@ export default function App() {
         </div>
 
         {/* Sidebar Footer Controls */}
-        <div className="sidebar-footer">
-          <button 
-            className="action-btn" 
-            style={{ 
-              background: 'rgba(255,255,255,0.03)', 
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
-              flexGrow: 1,
+        <div className="sidebar-footer" style={{ flexDirection: 'column' }}>
+          {userId && (
+            <div style={{ 
+              fontSize: '11px', 
+              color: 'var(--text-muted)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '6px 12px',
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.03)',
               justifyContent: 'center',
-              padding: '10px'
-            }}
-            onClick={() => setShowSettings(true)}
-          >
-            <Settings size={16} />
-            <span>Settings</span>
-          </button>
-          
-          <button 
-            className="action-btn" 
-            style={{ 
-              background: 'rgba(239, 68, 68, 0.1)', 
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-              color: '#f87171',
-              padding: '10px'
-            }}
-            onClick={handleLogout}
-            title="Lock Vault"
-          >
-            <Lock size={16} />
-          </button>
+              width: '100%',
+              boxSizing: 'border-box',
+              marginBottom: '4px'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+              <span>Vault: <strong>{userId}</strong></span>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <button 
+              className="action-btn" 
+              style={{ 
+                background: 'rgba(255,255,255,0.03)', 
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-secondary)',
+                flexGrow: 1,
+                justifyContent: 'center',
+                padding: '10px'
+              }}
+              onClick={() => setShowSettings(true)}
+            >
+              <Settings size={16} />
+              <span>Settings</span>
+            </button>
+            
+            <button 
+              className="action-btn" 
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                padding: '10px'
+              }}
+              onClick={handleLogout}
+              title="Lock Vault"
+            >
+              <Lock size={16} />
+            </button>
+          </div>
         </div>
       </aside>
 

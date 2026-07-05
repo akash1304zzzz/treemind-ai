@@ -14,6 +14,26 @@ const APP_PASSWORD = process.env.APP_PASSWORD || 'treemind123';
 app.use(cors());
 app.use(express.json());
 
+// Helper to get paths for a user
+function getUserPaths(userId) {
+  const safeUserId = userId ? userId.replace(/[^a-zA-Z0-9_-]/g, '') : 'default';
+  const vaultDir = path.join(__dirname, '../vault', safeUserId);
+  const queuePath = path.join(vaultDir, 'queue.md');
+  const treePath = path.join(vaultDir, 'tree.json');
+  
+  if (!fs.existsSync(vaultDir)) {
+    fs.mkdirSync(vaultDir, { recursive: true });
+  }
+  if (!fs.existsSync(treePath)) {
+    fs.writeFileSync(treePath, '[]', 'utf8');
+  }
+  if (!fs.existsSync(queuePath)) {
+    fs.writeFileSync(queuePath, '# Remind AI Ingestion Queue\n\n', 'utf8');
+  }
+  
+  return { vaultDir, queuePath, treePath, userId: safeUserId };
+}
+
 // Middleware to check app password
 function authMiddleware(req, res, next) {
   const password = req.headers['x-app-password'] || req.query.password;
@@ -36,7 +56,8 @@ app.post('/api/login', (req, res) => {
 
 // 2. Queue Endpoints
 app.get('/api/queue', authMiddleware, (req, res) => {
-  const queuePath = path.join(__dirname, '../queue.md');
+  const userId = req.headers['x-user-id'] || 'default';
+  const { queuePath } = getUserPaths(userId);
   if (!fs.existsSync(queuePath)) {
     return res.json([]);
   }
@@ -77,7 +98,8 @@ app.post('/api/queue', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'URL is required' });
   }
   
-  const queuePath = path.join(__dirname, '../queue.md');
+  const userId = req.headers['x-user-id'] || 'default';
+  const { queuePath } = getUserPaths(userId);
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
   const depthVal = depth || 'Detailed Notes';
   
@@ -89,7 +111,8 @@ app.post('/api/queue', authMiddleware, (req, res) => {
 
 // 3. Tree JSON Index Endpoint
 app.get('/api/tree', authMiddleware, (req, res) => {
-  const treePath = path.join(__dirname, '../vault/tree.json');
+  const userId = req.headers['x-user-id'] || 'default';
+  const { treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.json([]);
   }
@@ -106,7 +129,17 @@ app.get('/api/tree', authMiddleware, (req, res) => {
 });
 
 // 4. Vault Files Static Access
-app.use('/api/vault', authMiddleware, express.static(path.join(__dirname, '../vault'), {
+app.use('/api/vault', authMiddleware, (req, res, next) => {
+  const userId = req.headers['x-user-id'] || 'default';
+  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
+  const requestedPath = path.normalize(req.path).replace(/\\/g, '/');
+  
+  if (requestedPath.startsWith(`/${safeUserId}/`)) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Access denied to this vault.' });
+  }
+}, express.static(path.join(__dirname, '../vault'), {
   setHeaders: (res, path) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -162,10 +195,14 @@ app.post('/api/settings', authMiddleware, (req, res) => {
 
 // 6. Ingest Trigger Endpoint
 app.post('/api/ingest', authMiddleware, (req, res) => {
-  console.log('Triggering queue ingestion process...');
+  const userId = req.headers['x-user-id'] || 'default';
+  const { vaultDir, queuePath } = getUserPaths(userId);
+  console.log(`Triggering queue ingestion process for user: ${userId}...`);
   const ingestScript = path.join(__dirname, '../scripts/ingest.py');
   
-  exec(`python "${ingestScript}"`, { env: process.env, cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
+  const command = `python "${ingestScript}" --queue "${queuePath}" --vault "${vaultDir}"`;
+  
+  exec(command, { env: process.env, cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Ingestion error: ${error.message}`);
       console.error(`stdout: ${stdout}`);
@@ -195,7 +232,8 @@ app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Missing or invalid parameters.' });
   }
 
-  const treePath = path.join(__dirname, '../vault/tree.json');
+  const userId = req.headers['x-user-id'] || 'default';
+  const { vaultDir, treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.status(404).json({ error: 'Vault tree index file not found.' });
   }
@@ -241,11 +279,11 @@ app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
     }
 
     // Create new folder structure if directory path changed
-    const newCategoryDir = path.join(__dirname, '../vault', ...categoryPath);
+    const newCategoryDir = path.join(vaultDir, ...categoryPath);
     fs.mkdirSync(newCategoryDir, { recursive: true });
 
     const filename = path.basename(oldRelativePath);
-    const newRelativePath = path.join('vault', ...categoryPath, filename).replace(/\\/g, '/');
+    const newRelativePath = path.join('vault', userId, ...categoryPath, filename).replace(/\\/g, '/');
     const fullNewPath = path.join(__dirname, '..', newRelativePath);
 
     // Save content to the new path
@@ -282,7 +320,8 @@ app.post('/api/category/rename', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Missing or invalid parameters.' });
   }
 
-  const treePath = path.join(__dirname, '../vault/tree.json');
+  const userId = req.headers['x-user-id'] || 'default';
+  const { vaultDir, treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.status(404).json({ error: 'Vault tree index file not found.' });
   }
@@ -324,11 +363,11 @@ app.post('/api/category/rename', authMiddleware, (req, res) => {
           }
           
           // Write to the new folder path
-          const newDir = path.join(__dirname, '../vault', ...updatedCategoryPath);
+          const newDir = path.join(vaultDir, ...updatedCategoryPath);
           fs.mkdirSync(newDir, { recursive: true });
           
           const filename = path.basename(oldRelativePath);
-          const newRelativePath = path.join('vault', ...updatedCategoryPath, filename).replace(/\\/g, '/');
+          const newRelativePath = path.join('vault', userId, ...updatedCategoryPath, filename).replace(/\\/g, '/');
           const fullNewPath = path.join(__dirname, '..', newRelativePath);
           
           fs.writeFileSync(fullNewPath, newFileContent, 'utf8');
