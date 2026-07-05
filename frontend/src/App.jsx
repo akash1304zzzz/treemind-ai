@@ -243,7 +243,10 @@ export default function App() {
     setSettingsStatus('');
     
     // 1. Clean and save Server URL to localStorage
-    const cleanedUrl = serverUrl ? serverUrl.trim().replace(/\/$/, '') : '';
+    let cleanedUrl = serverUrl ? serverUrl.trim().replace(/\/$/, '') : '';
+    if (cleanedUrl && !/^https?:\/\//i.test(cleanedUrl)) {
+      cleanedUrl = 'http://' + cleanedUrl;
+    }
     const oldUrl = localStorage.getItem('treemind_server_url') || '';
     
     if (cleanedUrl) {
