@@ -1,0 +1,297 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>TreeMind AI - Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&amp;family=Inter:wght@500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#f7f9fb",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-low": "#f2f4f6",
+                        "on-secondary-container": "#004666",
+                        "on-error": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "primary": "#000000",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "tertiary": "#000000",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c6c6cd",
+                        "secondary-container": "#39b8fd",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-secondary-fixed": "#001e2f",
+                        "secondary-fixed": "#c9e6ff",
+                        "on-surface-variant": "#45464d",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "tertiary-container": "#0b1c30",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#131b2e",
+                        "on-primary-container": "#7c839b",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed": "#131b2e",
+                        "secondary-fixed-dim": "#89ceff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#76777d",
+                        "on-tertiary-container": "#75859d",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary-fixed": "#d3e4fe",
+                        "inverse-primary": "#bec6e0",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "secondary": "#006591",
+                        "surface-container-highest": "#e0e3e5",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-background": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "unit": "4px",
+                        "margin-desktop": "40px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px",
+                        "container-max": "1280px",
+                        "stack-lg": "32px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Public Sans"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Public Sans"],
+                        "label-sm": ["Inter"],
+                        "headline-xl": ["Public Sans"],
+                        "headline-md": ["Public Sans"],
+                        "body-md": ["Public Sans"],
+                        "headline-lg": ["Public Sans"],
+                        "body-lg": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .progress-bar-animated {
+            background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+            background-size: 1rem 1rem;
+            animation: progress-animation 1s linear infinite;
+        }
+        @keyframes progress-animation {
+            from { background-position: 1rem 0; }
+            to { background-position: 0 0; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen font-body-md flex flex-col md:flex-row">
+<!-- TopAppBar (Mobile) -->
+<header class="md:hidden bg-surface dark:bg-surface fixed top-0 w-full border-b border-outline-variant dark:border-outline-variant z-50 flex items-center justify-between px-margin-mobile w-full h-16">
+<div class="flex items-center gap-stack-sm text-primary dark:text-primary transition-colors duration-200">
+<span class="material-symbols-outlined text-[24px]">account_tree</span>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">TreeMind AI</span>
+</div>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container rounded-full p-2 transition-colors duration-200">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<!-- NavigationDrawer (Desktop) -->
+<nav class="hidden md:flex bg-surface-container dark:bg-surface-container h-full w-72 rounded-r-xl border-r border-outline-variant dark:border-outline-variant flex-col py-stack-lg px-stack-md fixed top-0 left-0 z-40">
+<div class="mb-stack-lg px-stack-md">
+<h2 class="font-headline-md text-headline-md text-primary">Workspace</h2>
+</div>
+<div class="flex flex-col gap-unit">
+<a class="flex items-center gap-stack-sm px-stack-md py-stack-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant duration-300 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">description</span>
+                All Notes
+            </a>
+<a class="flex items-center gap-stack-sm px-stack-md py-stack-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant duration-300 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">schedule</span>
+                Recent
+            </a>
+<a class="flex items-center gap-stack-sm px-stack-md py-stack-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant duration-300 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">star</span>
+                Favorites
+            </a>
+<a class="flex items-center gap-stack-sm px-stack-md py-stack-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant duration-300 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">delete</span>
+                Trash
+            </a>
+<a class="flex items-center gap-stack-sm px-stack-md py-stack-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant duration-300 ease-in-out font-body-md text-body-md mt-auto" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full pt-[80px] md:pt-stack-lg pb-[100px] md:pb-stack-lg px-margin-mobile md:px-margin-desktop md:ml-72 max-w-container-max mx-auto">
+<header class="mb-stack-lg">
+<h1 class="font-headline-xl text-headline-xl text-primary mb-stack-sm">Processing Queue</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">Monitor active document extractions and semantic map generations. Items are processed sequentially to ensure high fidelity.</p>
+</header>
+<!-- Stats Overview -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-stack-md mb-stack-lg">
+<div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-unit tracking-wider">Active</span>
+<span class="font-headline-lg text-headline-lg text-secondary">2</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-unit tracking-wider">Queued</span>
+<span class="font-headline-lg text-headline-lg text-primary">5</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-unit tracking-wider">Completed Today</span>
+<span class="font-headline-lg text-headline-lg text-primary">12</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-unit tracking-wider">Est. Time</span>
+<span class="font-headline-lg text-headline-lg text-primary">14m</span>
+</div>
+</section>
+<!-- Queue List -->
+<section class="flex flex-col gap-stack-md">
+<!-- Active Item 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-secondary"></div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-start gap-stack-md flex-1">
+<div class="bg-surface-container p-2 rounded-DEFAULT text-on-surface-variant">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary">Q3 Financial Analysis Report.pdf</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Semantic Extraction • 45 pages</p>
+</div>
+</div>
+<div class="flex flex-col md:items-end flex-1 min-w-[200px]">
+<div class="flex justify-between w-full mb-unit">
+<span class="font-label-sm text-label-sm text-secondary animate-pulse">Extracting Entities...</span>
+<span class="font-label-md text-label-md text-primary">68%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full progress-bar-animated" style="width: 68%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Active Item 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-secondary"></div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-start gap-stack-md flex-1">
+<div class="bg-surface-container p-2 rounded-DEFAULT text-on-surface-variant">
+<span class="material-symbols-outlined">audio_file</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary">Board Meeting Recording - Nov 12.mp3</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Transcription &amp; Summarization • 1h 45m</p>
+</div>
+</div>
+<div class="flex flex-col md:items-end flex-1 min-w-[200px]">
+<div class="flex justify-between w-full mb-unit">
+<span class="font-label-sm text-label-sm text-secondary animate-pulse">Transcribing...</span>
+<span class="font-label-md text-label-md text-primary">32%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full progress-bar-animated" style="width: 32%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Queued Item 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md opacity-80">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-start gap-stack-md flex-1">
+<div class="bg-surface p-2 rounded-DEFAULT text-outline">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Competitor Landscape Matrix.docx</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Knowledge Graph Generation</p>
+</div>
+</div>
+<div class="flex items-center gap-stack-md">
+<span class="font-label-sm text-label-sm text-outline px-2 py-1 bg-surface-variant rounded-DEFAULT">Queued #1</span>
+<button class="text-outline hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Queued Item 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md opacity-80">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-start gap-stack-md flex-1">
+<div class="bg-surface p-2 rounded-DEFAULT text-outline">
+<span class="material-symbols-outlined">language</span>
+</div>
+<div>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface">Industry Research Articles</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Web Scraping &amp; Indexing • 14 URLs</p>
+</div>
+</div>
+<div class="flex items-center gap-stack-md">
+<span class="font-label-sm text-label-sm text-outline px-2 py-1 bg-surface-variant rounded-DEFAULT">Queued #2</span>
+<button class="text-outline hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden bg-surface dark:bg-surface fixed bottom-0 w-full z-50 border-t border-outline-variant dark:border-outline-variant flex justify-around items-center h-20 pb-safe w-full">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1">dashboard</span>
+<span class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed-dim">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1">folder_open</span>
+<span class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed-dim">Folders</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-container text-on-secondary-container dark:text-secondary-container rounded-full px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1">hourglass_empty</span>
+<span class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed-dim">Queue</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed-dim">Profile</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>TreeMind AI - Emergent Properties in Large Neural Networks</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@300;400;600;700;800;900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e3e5",
+                        "secondary-container": "#39b8fd",
+                        "secondary-fixed-dim": "#89ceff",
+                        "secondary": "#006591",
+                        "surface-dim": "#d8dadc",
+                        "surface-bright": "#f7f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-tint": "#565e74",
+                        "on-surface-variant": "#45464d",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed": "#001e2f",
+                        "on-primary-container": "#7c839b",
+                        "secondary-fixed": "#c9e6ff",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#0b1c30",
+                        "surface-container-low": "#f2f4f6",
+                        "outline": "#76777d",
+                        "on-secondary-container": "#004666",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#dae2fd",
+                        "inverse-surface": "#2d3133",
+                        "on-primary-fixed": "#131b2e",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#bec6e0",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "inverse-on-surface": "#eff1f3",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#75859d",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "primary": "#000000",
+                        "on-surface": "#191c1e",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "primary-container": "#131b2e",
+                        "tertiary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#d3e4fe",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "outline-variant": "#c6c6cd",
+                        "surface-container": "#eceef0",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "stack-lg": "32px",
+                        "stack-md": "16px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "gutter": "24px",
+                        "container-max": "1280px",
+                        "stack-sm": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Public Sans"],
+                        "body-sm": ["Public Sans"],
+                        "body-lg": ["Public Sans"],
+                        "headline-xl": ["Public Sans"],
+                        "body-md": ["Public Sans"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Public Sans"],
+                        "label-sm": ["Inter"],
+                        "headline-md": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #f7f9fb;
+            font-family: 'Public Sans', sans-serif;
+            color: #191c1e;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .lineage-border {
+            border-left: 2px solid #e0e3e5;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c6c6cd;
+            border-radius: 10px;
+        }
+        .node-active {
+            border-left: 2px solid #006591 !important;
+        }
+    </style>
+</head>
+<body class="flex overflow-hidden">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant flex flex-col py-stack-md z-50">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">TreeMind AI</h1>
+<p class="font-body-md text-sm text-on-surface-variant opacity-70">Intellectual Workspace</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center px-3 py-3 text-secondary font-bold border-l-2 border-secondary-container bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">description</span>
+<span class="font-body-md text-body-md">All Notes</span>
+</a>
+<a class="flex items-center px-3 py-3 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">folder_open</span>
+<span class="font-body-md text-body-md">Folders</span>
+</a>
+<a class="flex items-center px-3 py-3 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">slow_motion_video</span>
+<span class="font-body-md text-body-md">Queue</span>
+</a>
+<a class="flex items-center px-3 py-3 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">account_circle</span>
+<span class="font-body-md text-body-md">Profile</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-primary text-on-primary font-bold flex items-center justify-center rounded-lg hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined mr-2">add</span>
+<span>New Node</span>
+</button>
+</div>
+</aside>
+<!-- Main Workspace Container -->
+<main class="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
+<!-- TopAppBar Shell -->
+<header class="h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-margin-desktop sticky top-0 z-40">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-2 pl-10 pr-4 font-label-md text-label-md focus:ring-2 focus:ring-secondary-container outline-none transition-all" placeholder="Search knowledge base..." type="text">
+</div>
+</div>
+<div class="flex items-center space-x-6 ml-6">
+<div class="flex items-center space-x-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="h-6 w-px bg-outline-variant"></div>
+<div class="flex items-center space-x-3">
+<button class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors px-2">Export</button>
+<button class="font-label-md text-label-md bg-primary text-on-primary px-4 py-2 rounded-full font-bold hover:opacity-90 transition-opacity">Share</button>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Column: Detailed Note -->
+<section class="flex-1 overflow-y-auto custom-scrollbar bg-surface-bright">
+<div class="max-w-4xl mx-auto px-margin-desktop py-12">
+<!-- Headline Section -->
+<header class="mb-stack-lg">
+<nav class="flex items-center space-x-2 text-on-surface-variant opacity-60 mb-4">
+<span class="font-label-sm text-label-sm">Workspace</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-label-sm text-label-sm">AI Research</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-label-sm text-label-sm">Emergence</span>
+</nav>
+<h1 class="font-headline-xl text-headline-xl text-primary leading-tight">Emergent Properties in Large Neural Networks</h1>
+<div class="mt-4 flex items-center space-x-4">
+<div class="flex items-center text-on-surface-variant opacity-80">
+<span class="material-symbols-outlined text-sm mr-1">history</span>
+<span class="font-label-sm text-label-sm">Edited 2 hours ago</span>
+</div>
+<div class="flex items-center text-on-surface-variant opacity-80">
+<span class="material-symbols-outlined text-sm mr-1">person</span>
+<span class="font-label-sm text-label-sm">TreeMind AI-4.5</span>
+</div>
+</div>
+</header>
+<!-- AI Synthesis -->
+<div class="bg-white border border-outline-variant p-8 mb-stack-lg relative overflow-hidden transition-all duration-700 opacity-0 translate-y-4">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-container"></div>
+<div class="flex items-start mb-4">
+<span class="material-symbols-outlined text-secondary mr-2" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<h2 class="font-headline-md text-headline-md text-primary">AI Synthesis</h2>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                            Emergent properties represent phase transitions where model performance on a specific task increases sharply and unpredictably as computational scale increases. Unlike traditional learning curves, these "abilities" (e.g., zero-shot reasoning, arithmetic, translation) are effectively absent in smaller models and materialize only after crossing specific parameter thresholds.
+                        </p>
+</div>
+<!-- Key Takeaways -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md mb-stack-lg transition-all duration-700 opacity-0 translate-y-4">
+<div class="bg-surface-container-low p-6 border border-outline-variant">
+<h3 class="font-label-md text-label-md text-primary font-bold uppercase tracking-wider mb-4">Core Principles</h3>
+<ul class="space-y-3">
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-2">check_circle</span>
+<span class="font-body-md text-body-md">Scale-dependent thresholding (Phase transitions)</span>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-2">check_circle</span>
+<span class="font-body-md text-body-md">Unpredictable qualitative shifts in capability</span>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-2">check_circle</span>
+<span class="font-body-md text-body-md">Cross-domain generalization at extreme parameters</span>
+</li>
+</ul>
+</div>
+<div class="bg-surface-container-low p-6 border border-outline-variant">
+<h3 class="font-label-md text-label-md text-primary font-bold uppercase tracking-wider mb-4">Critical Metrics</h3>
+<ul class="space-y-3">
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-2">analytics</span>
+<span class="font-body-md text-body-md">FLOPs (Floating Point Operations)</span>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-2">analytics</span>
+<span class="font-body-md text-body-md">Dataset Diversity &amp; Token Volume</span>
+</li>
+<li class="flex items-start">
+<span class="material-symbols-outlined text-secondary mr-2">analytics</span>
+<span class="font-body-md text-body-md">Model Sparsity vs. Density Ratios</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Detailed Exploration: Timeline Flow -->
+<section>
+<h2 class="font-headline-md text-headline-md text-primary mb-stack-md">Detailed Exploration</h2>
+<div class="space-y-stack-lg relative">
+<!-- Vertical Line -->
+<div class="absolute left-[11px] top-4 bottom-4 w-0.5 bg-outline-variant transition-all duration-700 opacity-0 translate-y-4"></div>
+<!-- Card 1 -->
+<div class="relative pl-10 transition-all duration-700 opacity-0 translate-y-4">
+<div class="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-primary rounded-full z-10"></div>
+<div class="bg-white border border-outline-variant p-6 hover:shadow-sm transition-shadow">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline-md text-headline-md font-bold">The Scaling Hypothesis</h4>
+<span class="bg-secondary-fixed text-on-secondary-fixed px-2 py-1 rounded font-label-sm text-xs">Phase 1</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">
+                                        The foundational belief that intelligence is primarily a function of compute and data. Early LLMs exhibited linear improvements in perplexity, hiding the "latent" capabilities that would only trigger at 10^22 FLOPs.
+                                    </p>
+<div class="flex space-x-2">
+<span class="text-xs font-label-md px-2 py-1 bg-surface-container-high rounded text-on-surface-variant">#Chinchilla</span>
+<span class="text-xs font-label-md px-2 py-1 bg-surface-container-high rounded text-on-surface-variant">#ScalingLaws</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="relative pl-10 transition-all duration-700 opacity-0 translate-y-4">
+<div class="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-primary rounded-full z-10"></div>
+<div class="bg-white border border-outline-variant p-6 node-active shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline-md text-headline-md font-bold">Discontinuous Progress</h4>
+<span class="bg-secondary-fixed text-on-secondary-fixed px-2 py-1 rounded font-label-sm text-xs">Critical</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">
+                                        Analysis of BIG-bench tasks showing that for 3-digit multiplication, accuracy stays near 0% until 100B parameters, then jumps to 40%+. This creates a "miracle" illusion in AI capability evolution.
+                                    </p>
+<div class="p-4 bg-surface-container-low border border-outline-variant rounded mb-4">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label-sm text-label-sm font-bold">Accuracy Curve</span>
+<span class="text-xs text-on-surface-variant">FLOPs vs Result</span>
+</div>
+<div class="h-24 w-full flex items-end space-x-1">
+<div class="bg-outline-variant w-full h-[5%]"></div>
+<div class="bg-outline-variant w-full h-[5%]"></div>
+<div class="bg-outline-variant w-full h-[7%]"></div>
+<div class="bg-outline-variant w-full h-[6%]"></div>
+<div class="bg-outline-variant w-full h-[10%]"></div>
+<div class="bg-secondary-container w-full h-[45%]"></div>
+<div class="bg-secondary w-full h-[85%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="relative pl-10 transition-all duration-700 opacity-0 translate-y-4">
+<div class="absolute left-0 top-1.5 w-6 h-6 bg-white border-2 border-primary rounded-full z-10"></div>
+<div class="bg-white border border-outline-variant p-6 hover:shadow-sm transition-shadow">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline-md text-headline-md font-bold">Future Projections</h4>
+<span class="bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded font-label-sm text-xs">Forecast</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                                        Next-generation architectures focusing on "Active Emergence"—designing networks that intentionally trigger these transitions earlier through recursive logic loops.
+                                    </p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</section>
+<!-- Right Sidebar: Contextual Metadata -->
+<aside class="w-80 bg-surface-container-low border-l border-outline-variant overflow-y-auto custom-scrollbar flex flex-col p-6 space-y-stack-lg">
+<!-- Source Metadata -->
+<section>
+<h3 class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Source Metadata</h3>
+<div class="group cursor-pointer">
+<div class="aspect-video w-full mb-3 overflow-hidden rounded border border-outline-variant relative transition-all duration-700 opacity-0 translate-y-4">
+<div class="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="A macro photography shot of a high-tech microprocessor glowing with electric blue light, representing neural network hardware. The image has a clean, professional aesthetic with deep midnight tones and sharp focus, reflecting a high-end intellectual research environment. Soft bokeh highlights scientific precision." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDJvqfuPcWucH6klIHEQZv6f28RKfnpo7EyGkDu6HaWPNPeleIXnsKwD0H19XbhQf7F3TcWnc8KJh8XHxXHH9Q7PbmSMHmmFyi8VlFqtLpLaTu943f6PdiwIE6_dETugu1T0527AsqR4boXgMDxq9mbCxo1JeMpWj__dESija-KOo0RXYZhFS2DLvuzOoD7N3PNZcvz_M__rs3_K-LHH-fYZP4CNBTfpoLx4JfSIAJ2i73TUiBljuoRt0XJqhmCUEoRnzyJorXjPmpY')"></div>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-3xl">open_in_new</span>
+</div>
+</div>
+<h4 class="font-label-md text-label-md font-bold text-primary group-hover:text-secondary transition-colors leading-snug mb-1">Wei et al. (2022) - Emergent Abilities of Large Language Models</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-70">Journal of Artificial Intelligence Research</p>
+</div>
+<div class="mt-4 space-y-2">
+<div class="flex justify-between text-xs py-1 border-b border-outline-variant/30 transition-all duration-700 opacity-0 translate-y-4">
+<span class="text-on-surface-variant">Processed</span>
+<span class="font-bold">Oct 24, 2023</span>
+</div>
+<div class="flex justify-between text-xs py-1 border-b border-outline-variant/30 transition-all duration-700 opacity-0 translate-y-4">
+<span class="text-on-surface-variant">Word Count</span>
+<span class="font-bold">14,204</span>
+</div>
+<div class="flex justify-between text-xs py-1 transition-all duration-700 opacity-0 translate-y-4">
+<span class="text-on-surface-variant">Format</span>
+<span class="font-bold">PDF / Research Paper</span>
+</div>
+</div>
+</section>
+<!-- Tags -->
+<section>
+<h3 class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Nodes &amp; Clusters</h3>
+<div class="flex flex-wrap gap-2">
+<span class="bg-white border border-outline-variant px-3 py-1 rounded-full text-xs font-label-md hover:border-secondary transition-colors cursor-pointer">Artificial Intelligence</span>
+<span class="bg-white border border-outline-variant px-3 py-1 rounded-full text-xs font-label-md hover:border-secondary transition-colors cursor-pointer">Neural Networks</span>
+<span class="bg-white border border-outline-variant px-3 py-1 rounded-full text-xs font-label-md hover:border-secondary transition-colors cursor-pointer">Complexity Theory</span>
+<span class="bg-white border border-outline-variant px-3 py-1 rounded-full text-xs font-label-md hover:border-secondary transition-colors cursor-pointer">AGI</span>
+<span class="bg-white border border-outline-variant px-3 py-1 rounded-full text-xs font-label-md hover:border-secondary transition-colors cursor-pointer">Model Scaling</span>
+</div>
+</section>
+<!-- Related Nodes -->
+<section class="flex-1">
+<h3 class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Related Nodes</h3>
+<div class="space-y-stack-sm">
+<!-- Node Item -->
+<div class="flex items-start p-3 bg-white border border-outline-variant hover:border-secondary-container transition-all cursor-pointer group duration-700 opacity-0 translate-y-4">
+<div class="w-1.5 h-10 bg-secondary-fixed-dim mr-3"></div>
+<div>
+<h5 class="text-sm font-bold leading-tight group-hover:text-secondary">Understanding LLM Benchmarking</h5>
+<p class="text-[10px] text-on-surface-variant opacity-60 mt-1 uppercase font-bold tracking-tighter">Connection: Methodology</p>
+</div>
+</div>
+<!-- Node Item -->
+<div class="flex items-start p-3 bg-white border border-outline-variant hover:border-secondary-container transition-all cursor-pointer group duration-700 opacity-0 translate-y-4">
+<div class="w-1.5 h-10 bg-on-primary-container mr-3"></div>
+<div>
+<h5 class="text-sm font-bold leading-tight group-hover:text-secondary">Philosophy of Mind in AI</h5>
+<p class="text-[10px] text-on-surface-variant opacity-60 mt-1 uppercase font-bold tracking-tighter">Connection: Theoretical</p>
+</div>
+</div>
+<!-- Node Item -->
+<div class="flex items-start p-3 bg-white border border-outline-variant hover:border-secondary-container transition-all cursor-pointer group duration-700 opacity-0 translate-y-4">
+<div class="w-1.5 h-10 bg-tertiary-fixed-dim mr-3"></div>
+<div>
+<h5 class="text-sm font-bold leading-tight group-hover:text-secondary">Transformer Architecture 101</h5>
+<p class="text-[10px] text-on-surface-variant opacity-60 mt-1 uppercase font-bold tracking-tighter">Connection: Technical</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border-2 border-dashed border-outline-variant text-on-surface-variant font-label-md text-xs hover:border-secondary hover:text-secondary transition-all">
+                        Link New Resource
+                    </button>
+</section>
+<!-- Quick Actions -->
+<div class="pt-6 border-t border-outline-variant">
+<div class="grid grid-cols-2 gap-2">
+<button class="p-2 bg-white border border-outline-variant flex flex-col items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-xl mb-1">draw</span>
+<span class="text-[10px] font-bold uppercase">Map View</span>
+</button>
+<button class="p-2 bg-white border border-outline-variant flex flex-col items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-xl mb-1">auto_awesome</span>
+<span class="text-[10px] font-bold uppercase">Extend AI</span>
+</button>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Micro-interaction Scripts -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Simple fade-in effect for elements
+            const observerOptions = {
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('opacity-100');
+                        entry.target.classList.remove('opacity-0', 'translate-y-4');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('section > div > div').forEach(el => {
+                el.classList.add('transition-all', 'duration-700', 'opacity-0', 'translate-y-4');
+                observer.observe(el);
+            });
+
+            // Active state handling for sidebar (demonstration only)
+            const navItems = document.querySelectorAll('nav a');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    navItems.forEach(i => {
+                        i.classList.remove('text-secondary', 'font-bold', 'border-l-2', 'border-secondary-container', 'bg-surface-variant');
+                        i.classList.add('text-on-surface-variant');
+                    });
+                    item.classList.add('text-secondary', 'font-bold', 'border-l-2', 'border-secondary-container', 'bg-surface-variant');
+                    item.classList.remove('text-on-surface-variant');
+                });
+            });
+        });
+    </script>
+</body></html>

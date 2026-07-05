@@ -1,0 +1,340 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>TreeMind AI - Detailed Note View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&amp;family=Inter:wght@500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#f7f9fb",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-low": "#f2f4f6",
+                        "on-secondary-container": "#004666",
+                        "on-error": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "primary": "#000000",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "tertiary": "#000000",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c6c6cd",
+                        "secondary-container": "#39b8fd",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-secondary-fixed": "#001e2f",
+                        "secondary-fixed": "#c9e6ff",
+                        "on-surface-variant": "#45464d",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "tertiary-container": "#0b1c30",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#131b2e",
+                        "on-primary-container": "#7c839b",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed": "#131b2e",
+                        "secondary-fixed-dim": "#89ceff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#76777d",
+                        "on-tertiary-container": "#75859d",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary-fixed": "#d3e4fe",
+                        "inverse-primary": "#bec6e0",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "secondary": "#006591",
+                        "surface-container-highest": "#e0e3e5",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-background": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "unit": "4px",
+                        "margin-desktop": "40px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px",
+                        "container-max": "1280px",
+                        "stack-lg": "32px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Public Sans"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Public Sans"],
+                        "label-sm": ["Inter"],
+                        "headline-xl": ["Public Sans"],
+                        "headline-md": ["Public Sans"],
+                        "body-md": ["Public Sans"],
+                        "headline-lg": ["Public Sans"],
+                        "body-lg": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.surface'); color: theme('colors.on-surface'); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen flex flex-col md:flex-row">
+<!-- TopAppBar (Mobile) / Top Row Web -->
+<header class="md:hidden bg-surface dark:bg-surface text-primary dark:text-primary fixed top-0 w-full border-b border-outline-variant dark:border-outline-variant z-50 flex items-center justify-between px-margin-mobile w-full h-16 transition-colors duration-200">
+<div class="flex items-center gap-2">
+<button aria-label="Go back" class="text-on-surface-variant hover:bg-surface-container rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">TreeMind AI</span>
+</div>
+<button aria-label="More options" class="text-on-surface-variant hover:bg-surface-container rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<!-- NavigationDrawer (Desktop) -->
+<nav class="hidden md:flex flex-col py-stack-lg px-stack-md bg-surface-container dark:bg-surface-container h-screen w-72 rounded-r-xl border-r border-outline-variant dark:border-outline-variant fixed left-0 top-0 z-40">
+<div class="mb-stack-lg px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="account_tree">account_tree</span>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">TreeMind AI</span>
+</div>
+<div class="px-4 mb-stack-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Workspace</div>
+<ul class="flex flex-col gap-unit">
+<li>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg bg-secondary-container text-on-secondary-container border-l-2 border-secondary font-body-md text-body-md duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+                    All Notes
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant font-body-md text-body-md duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+                    Recent
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant font-body-md text-body-md duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="star">star</span>
+                    Favorites
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant font-body-md text-body-md duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+                    Trash
+                </a>
+</li>
+<li class="mt-auto">
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant font-body-md text-body-md duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pt-24 pb-32 md:pt-stack-lg md:ml-72 flex flex-col gap-stack-lg">
+<!-- Header Section -->
+<div class="flex flex-col gap-stack-sm">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="folder_open">folder_open</span>
+<span>Research / Cognitive Models</span>
+<span class="mx-2">•</span>
+<span>Last edited 2h ago</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-primary mt-2">Emergent Properties in Large Neural Networks</h1>
+<!-- Metadata Bento Box -->
+<div class="mt-stack-md grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean, abstract architectural or scientific visualization showing complex intersecting planes and minimalist structures in slate and electric blue tones. Professional, high-end, research-focused imagery." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjywCExq70l4SRz1GXw50pXbhdfdYdVC8EfQ1XPY1VXd-eaEFSEoMi4iHZH-qOePBkuXUoLbkjZMvjg-FONsfQaLGhqxi8kL_byzkJiH3s1KvXi9soa1-I6MgHB5jHJ5ghYvFRQ5zZIjVUmZ0ncfnaS_8-I2FN78cLgZslry_aP9Na7DoBD8b_FIFtNCk1Nq-JlqxqBDh8t-BJZ4wraLKeeSUEgUaZ5LeTEtv6YnbVFJB3C87ebaTWUhfBXKgEcIwlFEMUFfFhdguL">
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-surface-variant">Source Document</div>
+<a class="font-body-md text-body-md text-secondary hover:underline flex items-center gap-1 mt-1" href="#">
+                            arXiv:2304.15004
+                            <span class="material-symbols-outlined text-[14px]" data-icon="open_in_new">open_in_new</span>
+</a>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary" data-icon="smart_toy">smart_toy</span>
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-surface-variant">AI Processing</div>
+<div class="font-body-md text-body-md text-on-surface mt-1">Deep Analysis Mode</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary" data-icon="link">link</span>
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-surface-variant">Connections</div>
+<div class="font-body-md text-body-md text-on-surface mt-1">3 Outbound Links</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Main Content -->
+<div class="lg:col-span-8 flex flex-col gap-stack-lg">
+<!-- AI Summary Box -->
+<div class="bg-surface-bright border border-secondary/20 rounded-xl p-stack-md relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-l-xl"></div>
+<div class="flex items-center gap-2 mb-3 text-secondary">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<h2 class="font-headline-md text-headline-md">AI Synthesis</h2>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed">
+                        The paper argues that certain cognitive capabilities in large language models are not programmed but emerge spontaneously when parameter counts exceed specific thresholds. These "phase transitions" in performance suggest that quantitative scaling leads to qualitative leaps in reasoning ability, challenging previous linear models of AI development.
+                    </p>
+</div>
+<!-- Key Takeaways -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md">
+<h2 class="font-headline-md text-headline-md text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="format_list_bulleted">format_list_bulleted</span>
+                        Key Takeaways
+                    </h2>
+<ul class="flex flex-col gap-3">
+<li class="flex gap-3 items-start group">
+<span class="material-symbols-outlined text-secondary mt-1 shrink-0" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Emergent abilities are defined as capabilities that are not present in smaller models but are present in larger models.</span>
+</li>
+<li class="flex gap-3 items-start group">
+<span class="material-symbols-outlined text-secondary mt-1 shrink-0" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">These abilities cannot be straightforwardly predicted by extrapolating the performance of smaller models.</span>
+</li>
+<li class="flex gap-3 items-start group">
+<span class="material-symbols-outlined text-secondary mt-1 shrink-0" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Examples include few-shot prompting, mathematical reasoning, and logical deduction.</span>
+</li>
+</ul>
+</div>
+<!-- Detailed Notes (Tree Structure Concept) -->
+<div>
+<h2 class="font-headline-md text-headline-md text-primary mb-4">Detailed Exploration</h2>
+<div class="flex flex-col gap-4 relative pl-4">
+<div class="absolute left-[7px] top-4 bottom-4 w-[2px] bg-outline-variant"></div>
+<!-- Node 1 -->
+<div class="relative">
+<div class="absolute -left-[17px] top-4 w-4 h-[2px] bg-outline-variant"></div>
+<div class="absolute -left-[21px] top-3 w-2 h-2 rounded-full bg-surface-container border-2 border-outline-variant z-10"></div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 ml-2">
+<h3 class="font-label-md text-label-md text-primary mb-2 uppercase tracking-wider">The Scaling Hypothesis</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                                    Performance scales predictably with compute, dataset size, and parameter count based on power laws. However, specific task performance shows sudden inflection points.
+                                </p>
+</div>
+</div>
+<!-- Node 2 (Active) -->
+<div class="relative">
+<div class="absolute -left-[17px] top-4 w-4 h-[2px] bg-secondary"></div>
+<div class="absolute -left-[21px] top-3 w-2 h-2 rounded-full bg-secondary z-10"></div>
+<div class="bg-surface-bright border-l-2 border-l-secondary border-y border-r border-y-outline-variant border-r-outline-variant rounded-r-xl rounded-l-none p-4 ml-2 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05)]">
+<h3 class="font-label-md text-label-md text-primary mb-2 uppercase tracking-wider">Phase Transitions</h3>
+<p class="font-body-md text-body-md text-on-surface">
+                                    Similar to physical systems transitioning from liquid to gas, neural networks exhibit sudden shifts in capability. The exact mechanisms remain under investigation.
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Context & Tags -->
+<div class="lg:col-span-4 flex flex-col gap-stack-md">
+<!-- Tags Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md">
+<h3 class="font-label-md text-label-md text-on-surface-variant mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="sell">sell</span>
+                        Tags &amp; Categories
+                    </h3>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface border border-outline-variant hover:border-secondary cursor-pointer transition-colors">AI Architecture</span>
+<span class="px-3 py-1 bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface border border-outline-variant hover:border-secondary cursor-pointer transition-colors">Machine Learning</span>
+<span class="px-3 py-1 bg-surface-container rounded-lg font-label-sm text-label-sm text-on-surface border border-outline-variant hover:border-secondary cursor-pointer transition-colors">Cognitive Science</span>
+<button class="px-3 py-1 bg-transparent rounded-lg font-label-sm text-label-sm text-secondary border border-dashed border-secondary hover:bg-secondary/10 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="add">add</span> Tag
+                        </button>
+</div>
+</div>
+<!-- Related Notes -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md">
+<h3 class="font-label-md text-label-md text-on-surface-variant mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="account_tree">account_tree</span>
+                        Related Nodes
+                    </h3>
+<div class="flex flex-col gap-2">
+<a class="p-3 rounded-lg border border-outline-variant hover:border-secondary bg-surface transition-colors flex items-start gap-3" href="#">
+<span class="material-symbols-outlined text-on-surface-variant shrink-0" data-icon="description">description</span>
+<div>
+<div class="font-label-md text-label-md text-primary">Attention Mechanisms</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-1">Foundational paper on transformers...</div>
+</div>
+</a>
+<a class="p-3 rounded-lg border border-outline-variant hover:border-secondary bg-surface transition-colors flex items-start gap-3" href="#">
+<span class="material-symbols-outlined text-on-surface-variant shrink-0" data-icon="description">description</span>
+<div>
+<div class="font-label-md text-label-md text-primary">Chinchilla Scaling Laws</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1 mt-1">Optimal ratio of parameters to...</div>
+</div>
+</a>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden bg-surface dark:bg-surface text-secondary dark:text-secondary-fixed-dim fixed bottom-0 w-full z-50 border-t border-outline-variant dark:border-outline-variant flex justify-around items-center h-20 pb-safe w-full">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-container text-on-secondary-container dark:text-secondary-container rounded-full px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span class="font-label-sm text-label-sm mt-1">Folders</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="hourglass_empty">hourglass_empty</span>
+<span class="font-label-sm text-label-sm mt-1">Queue</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-surface-container-high scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</button>
+</nav>
+</body></html>

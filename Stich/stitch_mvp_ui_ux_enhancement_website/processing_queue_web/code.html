@@ -1,0 +1,353 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>TreeMind AI | Processing Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e0e3e5",
+                    "secondary-container": "#39b8fd",
+                    "secondary-fixed-dim": "#89ceff",
+                    "secondary": "#006591",
+                    "surface-dim": "#d8dadc",
+                    "surface-bright": "#f7f9fb",
+                    "surface-container-high": "#e6e8ea",
+                    "surface-tint": "#565e74",
+                    "on-surface-variant": "#45464d",
+                    "primary-fixed-dim": "#bec6e0",
+                    "on-secondary-fixed": "#001e2f",
+                    "on-primary-container": "#7c839b",
+                    "secondary-fixed": "#c9e6ff",
+                    "error-container": "#ffdad6",
+                    "tertiary-container": "#0b1c30",
+                    "surface-container-low": "#f2f4f6",
+                    "outline": "#76777d",
+                    "on-secondary-container": "#004666",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#dae2fd",
+                    "inverse-surface": "#2d3133",
+                    "on-primary-fixed": "#131b2e",
+                    "on-tertiary-fixed": "#0b1c30",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#bec6e0",
+                    "tertiary-fixed-dim": "#b7c8e1",
+                    "inverse-on-surface": "#eff1f3",
+                    "background": "#f7f9fb",
+                    "on-tertiary-container": "#75859d",
+                    "on-tertiary": "#ffffff",
+                    "surface": "#f7f9fb",
+                    "primary": "#000000",
+                    "on-surface": "#191c1e",
+                    "on-background": "#191c1e",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "primary-container": "#131b2e",
+                    "tertiary": "#000000",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#d3e4fe",
+                    "on-tertiary-fixed-variant": "#38485d",
+                    "outline-variant": "#c6c6cd",
+                    "surface-container": "#eceef0",
+                    "on-secondary-fixed-variant": "#004c6e",
+                    "on-error": "#ffffff",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "stack-lg": "32px",
+                    "stack-md": "16px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "40px",
+                    "gutter": "24px",
+                    "container-max": "1280px",
+                    "stack-sm": "8px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Public Sans"],
+                    "body-sm": ["Public Sans"],
+                    "body-lg": ["Public Sans"],
+                    "headline-xl": ["Public Sans"],
+                    "body-md": ["Public Sans"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Public Sans"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Public Sans"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+        }
+        .progress-bar-animate {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background-size: 200% 100%;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar (Authority: Shared Components JSON) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline flex flex-col py-stack-md z-30">
+<div class="px-6 mb-stack-lg">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-on-primary-fixed">TreeMind AI</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Intellectual Workspace</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- All Notes -->
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-variant transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined mr-3">description</span>
+                All Notes
+            </a>
+<!-- Folders -->
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-variant transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined mr-3">folder_open</span>
+                Folders
+            </a>
+<!-- Queue (ACTIVE) -->
+<a class="flex items-center px-6 py-3 text-secondary dark:text-secondary-fixed-dim font-bold border-l-2 border-secondary-container bg-surface-variant transition-transform active:scale-95 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined mr-3">slow_motion_video</span>
+                Queue
+            </a>
+<!-- Profile -->
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-variant transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined mr-3">account_circle</span>
+                Profile
+            </a>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full bg-primary text-on-primary font-bold py-3 rounded hover:opacity-90 transition-opacity">
+                New Node
+            </button>
+</div>
+</aside>
+<!-- TopAppBar (Authority: Shared Components JSON) -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center px-margin-desktop w-[calc(100%-16rem)] z-20">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-label-md focus:ring-2 focus:ring-secondary-container transition-all" placeholder="Search workspace..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="h-6 w-px bg-outline-variant"></div>
+<button class="text-label-md font-label-md text-on-surface-variant hover:text-primary transition-colors">Export</button>
+<button class="px-4 py-2 bg-primary text-on-primary text-label-md font-bold rounded hover:opacity-90 transition-opacity">Share</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional user profile avatar in a minimalist workspace, high-end clean lighting, soft focus background of a modern office environment, neutral color palette with slate tones, 8k resolution, professional photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFkt8pIdPYmkbUdTYPOkJDTNbelHkyXfe5iITgkIFGZiBYrLYgY9sqH6T3aoEj3u8SkiC7L7Q1O-cUt5fvUHCOGoz2EDaWzvIK5GY-nu8RHQ67ytqOgBOEWKE_twbvAAHu0r1uhfGidaoE4HLINCZc25StKkBNgXaQ3ZJvUYo251yg6E6eBQx5ukXCRGaTSkiTtn0ef-5UKCT-Mag2TEMv37NTwNpU_6HZbjVu_zcLMgTBLuRy-8OsWmNN9lM3K97B1KyCAmFtG_D3">
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 pt-16 min-h-screen bg-surface">
+<div class="p-margin-desktop max-w-container-max mx-auto">
+<!-- Stats Header (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-stack-lg">
+<div class="bg-surface-container-lowest border border-outline-variant p-6 flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Active</span>
+<div class="flex items-baseline gap-2">
+<span class="text-headline-xl font-headline-xl text-primary">2</span>
+<div class="w-2 h-2 rounded-full bg-secondary animate-pulse mb-2"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-6 flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Queued</span>
+<span class="text-headline-xl font-headline-xl text-primary">5</span>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-6 flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Completed Today</span>
+<span class="text-headline-xl font-headline-xl text-primary">12</span>
+</div>
+<div class="bg-secondary-container/10 border border-secondary-container/30 p-6 flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-secondary uppercase tracking-wider">Est. Time</span>
+<div class="flex items-baseline gap-1">
+<span class="text-headline-xl font-headline-xl text-secondary">14</span>
+<span class="text-label-md font-label-md text-secondary">m</span>
+</div>
+</div>
+</div>
+<!-- Queue Section -->
+<div class="bg-surface-container-lowest border border-outline-variant">
+<div class="px-6 py-4 border-b border-outline-variant flex justify-between items-center">
+<h2 class="font-headline-md text-headline-md text-primary">Processing Queue</h2>
+<div class="flex items-center gap-2 text-on-surface-variant text-label-md">
+<span class="material-symbols-outlined text-sm">sync</span>
+                        Auto-refresh active
+                    </div>
+</div>
+<div class="divide-y divide-outline-variant">
+<!-- Item 1: Active -->
+<div class="p-6 flex items-center gap-6 group hover:bg-surface-container-low transition-colors">
+<div class="w-12 h-12 bg-primary-container rounded flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-2">
+<h3 class="font-body-md text-body-md font-bold text-primary">Q3_Economic_Forecast_Analysis.pdf</h3>
+<span class="text-label-sm font-label-sm text-secondary px-2 py-0.5 bg-secondary-fixed rounded">Extracting</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full overflow-hidden relative">
+<div class="bg-secondary h-full rounded-full transition-all duration-1000" style="width: 65.1%;"></div>
+<div class="absolute inset-0 progress-bar-animate"></div>
+</div>
+<div class="flex justify-between mt-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant">OCR Analysis in progress...</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">65% • ~2m left</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-error-container hover:text-error rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Item 2: Active -->
+<div class="p-6 flex items-center gap-6 group hover:bg-surface-container-low transition-colors">
+<div class="w-12 h-12 bg-secondary-container rounded flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined">audio_file</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-2">
+<h3 class="font-body-md text-body-md font-bold text-primary">Internal_Strategist_Briefing_09.mp3</h3>
+<span class="text-label-sm font-label-sm text-secondary px-2 py-0.5 bg-secondary-fixed rounded">Transcribing</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full overflow-hidden relative">
+<div class="bg-secondary h-full rounded-full transition-all duration-1000" style="width: 22.1%;"></div>
+<div class="absolute inset-0 progress-bar-animate"></div>
+</div>
+<div class="flex justify-between mt-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Semantic mapping active</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">22% • ~8m left</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-error-container hover:text-error rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Item 3: Queued -->
+<div class="p-6 flex items-center gap-6 group hover:bg-surface-container-low transition-colors opacity-75">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-2">
+<h3 class="font-body-md text-body-md font-bold text-primary">Literature_Review_Global_Trade.docx</h3>
+<span class="text-label-sm font-label-sm text-on-surface-variant px-2 py-0.5 bg-surface-variant rounded">Queued</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full"></div>
+<div class="flex justify-between mt-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Waiting for available node...</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Pos: #1</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-error-container hover:text-error rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Item 4: Queued -->
+<div class="p-6 flex items-center gap-6 group hover:bg-surface-container-low transition-colors opacity-75">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-2">
+<h3 class="font-body-md text-body-md font-bold text-primary">Annual_Report_Appendix_B.pdf</h3>
+<span class="text-label-sm font-label-sm text-on-surface-variant px-2 py-0.5 bg-surface-variant rounded">Queued</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full"></div>
+<div class="flex justify-between mt-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Waiting for available node...</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Pos: #2</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-error-container hover:text-error rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+</div>
+<div class="px-6 py-4 bg-surface-container-low/50 text-center">
+<button class="text-label-md font-label-md text-secondary hover:underline">View 3 more queued items</button>
+</div>
+</div>
+<!-- Contextual Help / Tips -->
+<div class="mt-stack-lg flex flex-col md:flex-row gap-gutter">
+<div class="flex-1 bg-surface-container-low p-6 rounded border border-outline-variant flex gap-4">
+<span class="material-symbols-outlined text-secondary">info</span>
+<div>
+<h4 class="font-label-md font-bold text-primary mb-1">Queue Management</h4>
+<p class="text-body-sm text-on-surface-variant">TreeMind AI processes complex document trees using parallel compute nodes. Large files may require additional extraction time for semantic indexing.</p>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-low p-6 rounded border border-outline-variant flex gap-4">
+<span class="material-symbols-outlined text-secondary">bolt</span>
+<div>
+<h4 class="font-label-md font-bold text-primary mb-1">Priority Processing</h4>
+<p class="text-body-sm text-on-surface-variant">Enterprise users can pin up to 3 items to the head of the queue. Use the 'Pin' action on any queued item to expedite its processing.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple micro-interaction for progress simulation
+        document.querySelectorAll('.progress-bar-animate').forEach(bar => {
+            setInterval(() => {
+                const parent = bar.previousElementSibling;
+                if (parent && parent.style.width) {
+                    let current = parseFloat(parent.style.width);
+                    if (current < 99) {
+                        parent.style.width = (current + 0.1) + '%';
+                    }
+                }
+            }, 3000);
+        });
+    </script>
+</body></html>

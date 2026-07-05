@@ -536,8 +536,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="lock-screen" style={{ color: '#9ca3af' }}>
-        <RefreshCw className="animate-spin" size={36} style={{ color: '#8b5cf6' }} />
+      <div className="lock-screen" style={{ color: 'var(--text-muted)' }}>
+        <RefreshCw className="animate-spin" size={36} style={{ color: 'var(--accent-primary)' }} />
       </div>
     );
   }
@@ -557,7 +557,7 @@ export default function App() {
             <div className="logo-icon" style={{ margin: '0 auto 16px auto' }}>
               <Lock size={20} color="#fff" />
             </div>
-            <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>Remind AI</h2>
+            <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>TreeMind AI</h2>
             <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter credentials to access local PKM Vault</p>
             <form onSubmit={handleLoginSubmit}>
               <input 
@@ -591,8 +591,9 @@ export default function App() {
                   width: '100%', 
                   justifyContent: 'center', 
                   marginTop: 12, 
-                  backgroundColor: 'rgba(139, 92, 246, 0.1)', 
-                  border: '1px dashed var(--violet-primary)' 
+                  backgroundColor: 'var(--accent-glow)', 
+                  border: '1px dashed var(--accent-primary)',
+                  color: 'var(--accent-primary)'
                 }}
                 onClick={() => setShowSettings(true)}
               >
@@ -663,7 +664,7 @@ export default function App() {
           <div className="logo-icon">
             <Sliders size={18} color="#fff" />
           </div>
-          <span className="logo-text">Remind AI</span>
+          <span className="logo-text">TreeMind AI</span>
         </div>
 
         <div className="nav-buttons-container">
@@ -917,7 +918,7 @@ export default function App() {
                     <div className="clip-card-body" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                          <span style={{ fontSize: 10, color: '#a78bfa', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                          <span style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                             {isYoutube ? 'YouTube' : isFacebook ? 'Facebook' : 'Instagram'}
                           </span>
                           <span className="clip-date" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{note.dateProcessed}</span>
@@ -939,11 +940,11 @@ export default function App() {
                           )}
                         </div>
 
-                        <div className="clip-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="tag-badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="clip-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="tag-badge" style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {note.categoryPath ? note.categoryPath.join(' › ') : 'General'}
                           </span>
-                          <span style={{ fontSize: 11, color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span>Read Note</span>
                             <ChevronRight size={12} />
                           </span>
@@ -1128,7 +1129,7 @@ export default function App() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 13 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ color: 'var(--text-secondary)' }}>Source Link:</span>
-                          <a href={selectedNote.url} target="_blank" rel="noopener noreferrer" style={{ color: '#c084fc', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <a href={selectedNote.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <span>Open Video</span>
                             <ExternalLink size={12} />
                           </a>
@@ -1152,8 +1153,8 @@ export default function App() {
                         )}
                       </div>
                       <div style={{ marginTop: '16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        <p style={{ fontWeight: 600, color: '#fff', marginBottom: '6px' }}>Folder Location:</p>
-                        <code style={{ background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '6px', display: 'block', wordBreak: 'break-all' }}>
+                        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Folder Location:</p>
+                        <code style={{ background: 'var(--bg-base)', padding: '4px 8px', borderRadius: '4px', display: 'block', wordBreak: 'break-all' }}>
                           {selectedNote.filePath}
                         </code>
                       </div>
@@ -1163,9 +1164,9 @@ export default function App() {
                         style={{
                           width: '100%',
                           marginTop: '20px',
-                          background: 'rgba(139, 92, 246, 0.15)',
-                          color: '#c084fc',
-                          border: '1px solid rgba(139, 92, 246, 0.3)',
+                          background: 'var(--accent-glow)',
+                          color: 'var(--accent-primary)',
+                          border: '1px solid var(--accent-primary)',
                           justifyContent: 'center'
                         }}
                         onClick={() => setIsEditingMeta(true)}
