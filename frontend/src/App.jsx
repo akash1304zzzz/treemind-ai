@@ -573,11 +573,9 @@ export default function App() {
               </button>
             )}
           </div>
-        </div>
-
-        {showSettings && (
-          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-            <div className="modal-container glass-panel settings-modal" onClick={(e) => e.stopPropagation()}>
+          {showSettings && (
+            <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+              <div className="modal-container glass-panel settings-modal" onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 600 }}>Connection Setup</h2>
                 <button className="modal-close-btn" onClick={() => setShowSettings(false)}>
@@ -618,6 +616,7 @@ export default function App() {
             </div>
           </div>
         )}
+        </div>
       </div>
     );
   }
