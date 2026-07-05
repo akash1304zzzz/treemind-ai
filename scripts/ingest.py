@@ -55,9 +55,10 @@ def download_thumbnail(url, note_title, vault_path):
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
                 
-        # Return path that the backend static endpoint serves
-        normalized_vault = vault_path.replace("\\", "/").strip("/")
-        return f"/api/{normalized_vault}/thumbnails/{filename}"
+        abs_vault = os.path.abspath(vault_path)
+        abs_workspace = os.path.abspath(os.path.dirname(os.path.dirname(abs_vault)))
+        rel_vault_path = os.path.relpath(abs_vault, start=abs_workspace).replace("\\", "/")
+        return f"/api/{rel_vault_path}/thumbnails/{filename}"
     except Exception as e:
         logger.error(f"Failed to download thumbnail: {e}")
         return url
@@ -471,7 +472,9 @@ category: "{' / '.join(category_path)}"
                 note_id = sanitize_filename(title) + "_" + str(int(time.time()))
                 
                 # Relative file path inside the workspace
-                rel_file_path = os.path.join(vault_path, *category_path, filename).replace("\\", "/")
+                abs_file_path = os.path.abspath(os.path.join(vault_path, *category_path, filename))
+                abs_workspace = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(vault_path))))
+                rel_file_path = os.path.relpath(abs_file_path, start=abs_workspace).replace("\\", "/")
                 
                 # Download and cache thumbnail locally to bypass CORS/expiration issues
                 local_thumbnail_url = download_thumbnail(thumbnail_url, title, vault_path)
