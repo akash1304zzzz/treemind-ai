@@ -523,46 +523,98 @@ export default function App() {
   // Password Lock Screen
   if (!isAuthenticated) {
     return (
-      <div className="lock-screen">
-        <div className="lock-container glass-panel">
-          <div className="logo-icon" style={{ margin: '0 auto 16px auto' }}>
-            <Lock size={20} color="#fff" />
-          </div>
-          <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>TreeMind AI</h2>
-          <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter password to access local PKM Vault</p>
-          <form onSubmit={handleLoginSubmit}>
-            <input 
-              type="password" 
-              className="lock-input"
-              placeholder="••••••••"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              required
-              autoFocus
-            />
-            {loginError && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 16 }}>{loginError}</p>}
-            <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
-              Decrypt Vault
-            </button>
-          </form>
-          {isCapacitor && (
-            <button 
-              type="button"
-              className="action-btn" 
-              style={{ 
-                width: '100%', 
-                justifyContent: 'center', 
-                marginTop: 12, 
-                backgroundColor: 'rgba(139, 92, 246, 0.1)', 
-                border: '1px dashed var(--violet-primary)' 
-              }}
-              onClick={() => setShowSettings(true)}
-            >
-              <Settings size={16} style={{ marginRight: 8 }} />
-              Configure Server Connection
-            </button>
-          )}
+      <div className="app-container">
+        {/* Ambient background glowing blobs */}
+        <div className="ambient-blobs">
+          <div className="blob-1"></div>
+          <div className="blob-2"></div>
         </div>
+
+        <div className="lock-screen">
+          <div className="lock-container glass-panel">
+            <div className="logo-icon" style={{ margin: '0 auto 16px auto' }}>
+              <Lock size={20} color="#fff" />
+            </div>
+            <h2 style={{ fontFamily: 'Outfit', fontWeight: 600 }}>TreeMind AI</h2>
+            <p style={{ color: '#9ca3af', fontSize: 13, marginTop: 8 }}>Enter password to access local PKM Vault</p>
+            <form onSubmit={handleLoginSubmit}>
+              <input 
+                type="password" 
+                className="lock-input"
+                placeholder="••••••••"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                required
+                autoFocus
+              />
+              {loginError && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 16 }}>{loginError}</p>}
+              <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
+                Decrypt Vault
+              </button>
+            </form>
+            {isCapacitor && (
+              <button 
+                type="button"
+                className="action-btn" 
+                style={{ 
+                  width: '100%', 
+                  justifyContent: 'center', 
+                  marginTop: 12, 
+                  backgroundColor: 'rgba(139, 92, 246, 0.1)', 
+                  border: '1px dashed var(--violet-primary)' 
+                }}
+                onClick={() => setShowSettings(true)}
+              >
+                <Settings size={16} style={{ marginRight: 8 }} />
+                Configure Server Connection
+              </button>
+            )}
+          </div>
+        </div>
+
+        {showSettings && (
+          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+            <div className="modal-container glass-panel settings-modal" onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 600 }}>Connection Setup</h2>
+                <button className="modal-close-btn" onClick={() => setShowSettings(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
+                <div className="settings-field">
+                  <label>Server URL (e.g. http://192.168.1.5:5000)</label>
+                  <input 
+                    type="url"
+                    className="url-input"
+                    placeholder="http://192.168.x.x:5000"
+                    value={serverUrl}
+                    onChange={(e) => setServerUrl(e.target.value)}
+                    required
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Your PC and phone must be connected to the same WiFi network.
+                  </span>
+                </div>
+
+                {settingsStatus && (
+                  <p style={{ 
+                    color: settingsStatus.includes('success') || settingsStatus.includes('Reloading') ? '#10b981' : '#ef4444', 
+                    fontSize: 13, 
+                    fontWeight: 600 
+                  }}>
+                    {settingsStatus}
+                  </p>
+                )}
+
+                <button type="submit" className="action-btn" style={{ marginTop: '8px', justifyContent: 'center' }}>
+                  Save Server URL
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
