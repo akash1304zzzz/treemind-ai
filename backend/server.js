@@ -130,7 +130,7 @@ app.get('/api/tree', authMiddleware, (req, res) => {
 
 // 4. Vault Files Static Access
 app.use('/api/vault', authMiddleware, (req, res, next) => {
-  const userId = req.headers['x-user-id'] || 'default';
+  const userId = req.headers['x-user-id'] || req.query.userId || 'default';
   const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
   const requestedPath = path.normalize(req.path).replace(/\\/g, '/');
   
@@ -394,6 +394,63 @@ app.post('/api/category/rename', authMiddleware, (req, res) => {
     res.json({ success: true, renamedCount });
   } catch (error) {
     res.status(500).json({ error: 'Failed to rename category: ' + error.message });
+  }
+});
+
+// 9. Delete Note Route
+app.post('/api/note/delete', authMiddleware, (req, res) => {
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ error: 'Note ID is required.' });
+  }
+
+  const userId = req.headers['x-user-id'] || 'default';
+  const { vaultDir, treePath } = getUserPaths(userId);
+  if (!fs.existsSync(treePath)) {
+    return res.status(404).json({ error: 'Vault tree index file not found.' });
+  }
+
+  try {
+    const content = fs.readFileSync(treePath, 'utf8');
+    const treeData = JSON.parse(content);
+    
+    const noteIndex = treeData.findIndex(n => n.id === id);
+    if (noteIndex === -1) {
+      return res.status(404).json({ error: 'Note not found in database.' });
+    }
+
+    const note = treeData[noteIndex];
+    const fullFilePath = path.join(__dirname, '..', note.filePath);
+
+    // 1. Delete physical markdown file
+    if (fs.existsSync(fullFilePath)) {
+      try {
+        fs.unlinkSync(fullFilePath);
+      } catch (err) {
+        console.error(`Failed to delete markdown file: ${err.message}`);
+      }
+    }
+
+    // 2. Delete cached thumbnail if it is local
+    if (note.thumbnailUrl && note.thumbnailUrl.startsWith('/api/')) {
+      const cleanThumbnailPath = note.thumbnailUrl.replace('/api/', '');
+      const fullThumbnailPath = path.join(__dirname, '..', cleanThumbnailPath);
+      if (fs.existsSync(fullThumbnailPath)) {
+        try {
+          fs.unlinkSync(fullThumbnailPath);
+        } catch (err) {
+          console.error(`Failed to delete thumbnail file: ${err.message}`);
+        }
+      }
+    }
+
+    // 3. Remove entry from tree.json
+    treeData.splice(noteIndex, 1);
+    fs.writeFileSync(treePath, JSON.stringify(treeData, null, 2), 'utf8');
+
+    res.json({ success: true, message: 'Note deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete note: ' + error.message });
   }
 });
 

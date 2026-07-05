@@ -875,4 +875,66 @@ body {
     padding: 20px;
     overflow-y: visible;
   }
+
+  /* Bottom Navigation Bar for Mobile */
+  .bottom-nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.05);
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-grow: 1;
+    height: 100%;
+    gap: 4px;
+    transition: all var(--transition-fast);
+  }
+
+  .bottom-nav-item.active {
+    color: var(--accent-primary);
+    font-weight: 600;
+  }
+
+  .bottom-nav-item svg {
+    color: inherit;
+  }
+
+  /* Padding offset so content doesn't get covered by bottom nav */
+  .app-container {
+    padding-bottom: 74px !important;
+  }
+
+  /* Hide sidebar on mobile unless tab folders is active */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* Show folders sidebar only when Folders tab is active */
+  .sidebar-mobile-active {
+    display: flex !important;
+    width: 100% !important;
+    height: calc(100vh - 64px) !important;
+    border-bottom: none !important;
+    overflow-y: auto !important;
+  }
 }

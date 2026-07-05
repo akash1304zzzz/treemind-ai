@@ -17,7 +17,9 @@ import {
   Sliders,
   CheckCircle,
   FileText,
-  Edit2
+  Edit2,
+  Home,
+  User
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
@@ -77,6 +79,8 @@ export default function App() {
   const [newSubCategory, setNewSubCategory] = useState('');
   const [editTagsInput, setEditTagsInput] = useState('');
   const [savingMeta, setSavingMeta] = useState(false);
+  const [deletingNote, setDeletingNote] = useState(false);
+  const [mobileTab, setMobileTab] = useState('home'); // 'home', 'folders', 'queue', 'profile'
 
   // Authenticate on mount or password change
   useEffect(() => {
@@ -408,6 +412,39 @@ export default function App() {
     }
   };
 
+  const handleDeleteNote = async () => {
+    if (!selectedNote) return;
+    if (!window.confirm(`Are you sure you want to permanently delete "${selectedNote.title}"?`)) {
+      return;
+    }
+
+    setDeletingNote(true);
+    try {
+      const res = await fetch(`${API_URL}/api/note/delete`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-app-password': password,
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({ id: selectedNote.id })
+      });
+
+      if (res.ok) {
+        setSelectedNote(null);
+        fetchData();
+      } else {
+        const errorData = await res.json();
+        alert('Error deleting note: ' + (errorData.error || res.statusText));
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message);
+    } finally {
+      setDeletingNote(false);
+    }
+  };
+
   const handleRenameCategory = async (oldPath) => {
     const oldPathStr = oldPath.join(' / ');
     const newName = prompt(`Rename category "${oldPathStr}" to:`, oldPath[oldPath.length - 1]);
@@ -503,12 +540,12 @@ export default function App() {
     
     // Simple custom regex markdown formatter
     const formatted = md
-      .replace(/^### (.*$)/gim, '<h3 style="color:#ffffff; margin:16px 0 8px 0; font-size:1.15rem; font-weight:600;">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 style="color:#ffffff; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px; margin:24px 0 12px 0; font-size:1.35rem; font-weight:600;">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 style="color:#ffffff; margin:28px 0 14px 0; font-size:1.6rem; font-weight:700;">$1</h1>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#8b5cf6; font-weight:600;">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em style="color:#c084fc;">$1</em>')
-      .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em; color:#a78bfa;">$1</code>')
+      .replace(/^### (.*$)/gim, '<h3 style="color:var(--text-primary); margin:16px 0 8px 0; font-size:1.15rem; font-weight:600;">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 style="color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:6px; margin:24px 0 12px 0; font-size:1.35rem; font-weight:600;">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 style="color:var(--text-primary); margin:28px 0 14px 0; font-size:1.6rem; font-weight:700;">$1</h1>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--accent-primary); font-weight:600;">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em style="color:var(--text-secondary);">$1</em>')
+      .replace(/`(.*?)`/g, '<code style="background:var(--bg-base); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:0.9em; color:var(--accent-primary);">$1</code>')
       .replace(/^\s*-\s*\[\s*\]\s*(.*$)/gim, '<li style="list-style-type:none; margin-left:0; margin-bottom:6px;">⬜ $1</li>')
       .replace(/^\s*-\s*\[\s*[xX]\s*\]\s*(.*$)/gim, '<li style="list-style-type:none; margin-left:0; margin-bottom:6px; color:#9ca3af; text-decoration:line-through;">✅ $1</li>')
       .replace(/^\s*-\s*(.*$)/gim, '<li style="margin-left:18px; margin-bottom:6px;">$1</li>')
@@ -535,7 +572,7 @@ export default function App() {
   const getThumbnailUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('/api/')) {
-      return `${API_URL}${url}?password=${password}`;
+      return `${API_URL}${url}?password=${password}&userId=${userId}`;
     }
     return url;
   };
@@ -665,7 +702,7 @@ export default function App() {
       </div>
 
       {/* Sidebar Navigation */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileTab === 'folders' ? 'sidebar-mobile-active' : ''}`}>
         <div className="logo-container">
           <div className="logo-icon">
             <Sliders size={18} color="#fff" />
@@ -676,7 +713,7 @@ export default function App() {
         <div className="nav-buttons-container">
           <button 
             className={`cat-btn ${!activeCategory ? 'active' : ''}`}
-            onClick={() => setActiveCategory(null)}
+            onClick={() => { setActiveCategory(null); setMobileTab('home'); }}
           >
             <span>All Notes</span>
             <FileText size={16} />
@@ -695,7 +732,7 @@ export default function App() {
                   <button 
                     className={`cat-btn ${isRootActive ? 'active' : ''}`}
                     style={{ flexGrow: 1 }}
-                    onClick={() => setActiveCategory({ root, sub: null })}
+                    onClick={() => { setActiveCategory({ root, sub: null }); setMobileTab('home'); }}
                   >
                     <span>{root}</span>
                   </button>
@@ -734,7 +771,7 @@ export default function App() {
                           <button
                             className={`sub-cat-btn ${isSubActive ? 'active' : ''}`}
                             style={{ flexGrow: 1 }}
-                            onClick={() => setActiveCategory({ root, sub })}
+                            onClick={() => { setActiveCategory({ root, sub }); setMobileTab('home'); }}
                           >
                             <ChevronRight size={10} />
                             <span>{sub}</span>
@@ -816,153 +853,290 @@ export default function App() {
       </aside>
 
       {/* Main Panel */}
-      <main className="main-dashboard">
+      <main className={`main-dashboard ${mobileTab === 'folders' ? 'mobile-hide-main' : ''}`}>
         {/* Header Search */}
         <header className="header-bar">
           <div>
             <h2 style={{ fontFamily: 'Outfit', fontSize: 20 }}>
-              {activeCategory 
+              {mobileTab === 'queue' ? 'Processing Queue' :
+               mobileTab === 'profile' ? 'Profile & Settings' :
+               activeCategory 
                 ? `${activeCategory.root} ${activeCategory.sub ? `› ${activeCategory.sub}` : ''}`
                 : 'Dashboard'}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-              {filteredNotes.length} notes processed
+              {mobileTab === 'queue' ? `${queue.filter(q => !q.processed).length} pending items` :
+               mobileTab === 'profile' ? `Vault ID: ${userId}` :
+               `${filteredNotes.length} notes processed`}
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div className="search-container">
-              <Search size={16} color="var(--text-muted)" />
-              <input 
-                type="text" 
-                className="search-input" 
-                placeholder="Search notes, tags, snippets..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+            {mobileTab === 'home' && (
+              <div className="search-container">
+                <Search size={16} color="var(--text-muted)" />
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  placeholder="Search notes, tags, snippets..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
 
-            <button 
-              className="action-btn"
-              style={{
-                background: isIngesting ? '#7c3aed' : 'rgba(139, 92, 246, 0.15)',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
-                color: '#c084fc',
-              }}
-              onClick={triggerIngestion}
-              disabled={isIngesting}
-            >
-              <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
-              <span>{isIngesting ? 'Syncing...' : 'Sync Ingest'}</span>
-            </button>
+            {mobileTab === 'home' && (
+              <button 
+                className="action-btn"
+                style={{
+                  background: isIngesting ? '#7c3aed' : 'rgba(139, 92, 246, 0.15)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  color: '#c084fc',
+                }}
+                onClick={triggerIngestion}
+                disabled={isIngesting}
+              >
+                <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
+                <span>{isIngesting ? 'Syncing...' : 'Sync Ingest'}</span>
+              </button>
+            )}
           </div>
         </header>
 
         {/* Queue URL Paste Box */}
-        <section className="paste-container glass-panel">
-          <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Plus size={20} color="var(--text-muted)" />
-            <input 
-              type="url" 
-              className="url-input"
-              placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..." 
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              required
-            />
-            <select 
-              className="depth-select"
-              value={depth}
-              onChange={(e) => setDepth(e.target.value)}
-            >
-              <option value="Quick Summary">Quick Summary</option>
-              <option value="Detailed Notes">Detailed Notes</option>
-              <option value="Fine-Grained Study">Fine-Grained Study</option>
-            </select>
-            <button type="submit" className="action-btn">
-              Queue Ingest
-            </button>
-            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
-            <button 
-              type="button"
-              className="action-btn"
-              style={{
-                background: isIngesting ? '#7c3aed' : 'rgba(236, 72, 153, 0.15)',
-                border: '1px solid rgba(236, 72, 153, 0.3)',
-                color: '#f472b6',
-              }}
-              onClick={triggerIngestion}
-              disabled={isIngesting}
-            >
-              <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
-              <span>{isIngesting ? 'Processing Ingestion...' : 'Process Queue'}</span>
-            </button>
-          </form>
-        </section>
+        {mobileTab === 'home' && (
+          <section className="paste-container glass-panel">
+            <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Plus size={20} color="var(--text-muted)" />
+              <input 
+                type="url" 
+                className="url-input"
+                placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..." 
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                required
+              />
+              <select 
+                className="depth-select"
+                value={depth}
+                onChange={(e) => setDepth(e.target.value)}
+              >
+                <option value="Quick Summary">Quick Summary</option>
+                <option value="Detailed Notes">Detailed Notes</option>
+                <option value="Fine-Grained Study">Fine-Grained Study</option>
+              </select>
+              <button type="submit" className="action-btn">
+                Queue Ingest
+              </button>
+              <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
+              <button 
+                type="button"
+                className="action-btn"
+                style={{
+                  background: isIngesting ? '#7c3aed' : 'rgba(236, 72, 153, 0.15)',
+                  border: '1px solid rgba(236, 72, 153, 0.3)',
+                  color: '#f472b6',
+                }}
+                onClick={triggerIngestion}
+                disabled={isIngesting}
+              >
+                <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
+                <span>{isIngesting ? 'Processing Ingestion...' : 'Process Queue'}</span>
+              </button>
+            </form>
+          </section>
+        )}
 
         {/* Dashboard Grid */}
-        <section className="content-area">
-          {filteredNotes.length === 0 ? (
-            <div className="empty-state">
-              <Folder size={48} style={{ strokeWidth: 1.2, color: 'var(--text-muted)', marginBottom: 16 }} />
-              <h3>No Notes Found</h3>
-              <p style={{ fontSize: 13, marginTop: 4, maxWidth: 320 }}>
-                {searchQuery ? 'Try adjusting your search terms.' : 'Paste a video URL above and hit Queue Ingest to organize your PKM tree.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid-layout">
-              {filteredNotes.map((note) => {
-                const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
-                const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
-                return (
-                  <div 
-                    key={note.id} 
-                    className="clip-card glass-panel"
-                    onClick={() => loadNoteContent(note)}
-                  >
-                    <div className="clip-card-body" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                          <span style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                            {isYoutube ? 'YouTube' : isFacebook ? 'Facebook' : 'Instagram'}
-                          </span>
-                          <span className="clip-date" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{note.dateProcessed}</span>
+        {mobileTab === 'home' && (
+          <section className="content-area">
+            {filteredNotes.length === 0 ? (
+              <div className="empty-state">
+                <Folder size={48} style={{ strokeWidth: 1.2, color: 'var(--text-muted)', marginBottom: 16 }} />
+                <h3>No Notes Found</h3>
+                <p style={{ fontSize: 13, marginTop: 4, maxWidth: 320 }}>
+                  {searchQuery ? 'Try adjusting your search terms.' : 'Paste a video URL above and hit Queue Ingest to organize your PKM tree.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid-layout">
+                {filteredNotes.map((note) => {
+                  const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
+                  const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
+                  return (
+                    <div 
+                      key={note.id} 
+                      className="clip-card glass-panel"
+                      onClick={() => loadNoteContent(note)}
+                    >
+                      <div className="clip-card-body" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                            <span style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                              {isYoutube ? 'YouTube' : isFacebook ? 'Facebook' : 'Instagram'}
+                            </span>
+                            <span className="clip-date" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{note.dateProcessed}</span>
+                          </div>
+                          <h3 className="clip-title" style={{ marginTop: '4px', fontSize: 16, lineHeight: 1.4, color: 'var(--text-primary)', fontWeight: 600 }}>{note.title}</h3>
+                          <p className="clip-snippet" style={{ color: 'var(--text-secondary)', fontSize: 13, display: '-webkit-box', WebKitLineClamp: 3, WebKitBoxOrient: 'vertical', overflow: 'hidden', margin: '8px 0 16px 0', lineHeight: 1.5 }}>
+                            {note.snippet || 'No description preview available.'}
+                          </p>
                         </div>
-                        <h3 className="clip-title" style={{ marginTop: '4px', fontSize: 16, lineHeight: 1.4, color: 'var(--text-primary)', fontWeight: 600 }}>{note.title}</h3>
-                        <p className="clip-snippet" style={{ color: 'var(--text-secondary)', fontSize: 13, display: '-webkit-box', WebKitLineClamp: 3, WebKitBoxOrient: 'vertical', overflow: 'hidden', margin: '8px 0 16px 0', lineHeight: 1.5 }}>
-                          {note.snippet || 'No description preview available.'}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-                          {note.tags && note.tags.length > 0 ? (
-                            note.tags.slice(0, 4).map(tag => (
-                              <span key={tag} className="tag-badge" style={{ fontSize: 11 }}>{tag}</span>
-                            ))
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: 11, fontStyle: 'italic' }}>No tags</span>
-                          )}
-                        </div>
+                        
+                        <div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                            {note.tags && note.tags.length > 0 ? (
+                              note.tags.slice(0, 4).map(tag => (
+                                <span key={tag} className="tag-badge" style={{ fontSize: 11 }}>{tag}</span>
+                              ))
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: 11, fontStyle: 'italic' }}>No tags</span>
+                            )}
+                          </div>
 
-                        <div className="clip-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="tag-badge" style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {note.categoryPath ? note.categoryPath.join(' › ') : 'General'}
-                          </span>
-                          <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span>Read Note</span>
-                            <ChevronRight size={12} />
-                          </span>
+                          <div className="clip-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span className="tag-badge" style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {note.categoryPath ? note.categoryPath.join(' › ') : 'General'}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>Read Note</span>
+                              <ChevronRight size={12} />
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Mobile Queue View */}
+        {mobileTab === 'queue' && (
+          <section className="content-area" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700 }}>Queue Pipeline Actions</h3>
+              <button 
+                type="button"
+                className="action-btn"
+                style={{
+                  background: isIngesting ? '#7c3aed' : 'var(--accent-primary)',
+                  color: '#fff',
+                  padding: '8px 16px'
+                }}
+                onClick={triggerIngestion}
+                disabled={isIngesting}
+              >
+                <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={14} />
+                <span style={{ fontSize: 12 }}>{isIngesting ? 'Syncing...' : 'Sync Ingest'}</span>
+              </button>
             </div>
-          )}
-        </section>
+
+            {/* Ingestion Status Info */}
+            <div style={{ background: '#0f172a', padding: '16px', borderRadius: '8px', color: '#10b981', fontFamily: 'monospace', fontSize: '11px', maxHeight: '120px', overflowY: 'auto', border: '1px solid var(--border-color)' }}>
+              {consoleLogs || 'No active logs. Queue a URL on the Home tab and tap Sync Ingest to run the extraction pipeline.'}
+            </div>
+
+            {/* Queue List Table */}
+            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>Pending Items ({queue.filter(q => !q.processed).length})</h4>
+              
+              {queue.filter(q => !q.processed).length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px 0' }}>No pending URLs in the queue.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {queue.filter(q => !q.processed).map((item, idx) => (
+                    <div key={idx} style={{ padding: '12px', background: 'var(--bg-base)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ minWidth: 0, flex: 1, marginRight: '12px' }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{item.url}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Added: {item.addedTime || 'Recent'} • {item.depth}</p>
+                      </div>
+                      <span className="tag-badge" style={{ background: 'var(--bg-elevated)', color: 'var(--accent-primary)', fontSize: 10 }}>Queued</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>Recently Processed</h4>
+              {queue.filter(q => q.processed).length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px 0' }}>No processed items in history.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                  {queue.filter(q => q.processed).slice(0, 10).map((item, idx) => (
+                    <div key={idx} style={{ padding: '12px', background: 'var(--bg-base)', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.75 }}>
+                      <div style={{ minWidth: 0, flex: 1, marginRight: '12px' }}>
+                        <p style={{ fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{item.url}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Processed: {item.processedTime}</p>
+                      </div>
+                      <span className="tag-badge" style={{ background: 'var(--bg-elevated)', color: '#10b981', fontSize: 10 }}>Success</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Mobile Profile View */}
+        {mobileTab === 'profile' && (
+          <section className="content-area" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Profile & Vault Settings</h3>
+            
+            {/* Active Vault Badge Card */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', fontSize: 20 }}>
+                🔑
+              </div>
+              <div>
+                <h4 style={{ fontSize: 16, fontWeight: 600 }}>Active Vault Path</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
+                  You are currently editing vault: <strong>{userId}</strong>
+                </p>
+              </div>
+              <span className="tag-badge" style={{ background: '#10b981', color: '#fff', fontSize: 11, padding: '4px 10px', border: 'none' }}>
+                Connected Securely
+              </span>
+            </div>
+
+            {/* Config Keys Option */}
+            <button 
+              className="action-btn"
+              style={{
+                width: '100%',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)',
+                justifyContent: 'center',
+                padding: '16px'
+              }}
+              onClick={() => setShowSettings(true)}
+            >
+              <Settings size={18} style={{ marginRight: 8 }} />
+              Configure Credentials & Keys
+            </button>
+
+            {/* Logout/Lock Option */}
+            <button 
+              className="action-btn"
+              style={{
+                width: '100%',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: '#ef4444',
+                justifyContent: 'center',
+                padding: '16px'
+              }}
+              onClick={handleLogout}
+            >
+              <Lock size={18} style={{ marginRight: 8 }} />
+              Lock Vault (Logout)
+            </button>
+          </section>
+        )}
 
         {/* Real-time Console Log Drawer */}
         <div className={`logs-drawer ${showConsole ? 'open' : ''}`}>
@@ -1179,6 +1353,21 @@ export default function App() {
                       >
                         ✏️ Edit Classification & Tags
                       </button>
+                      <button 
+                        className="action-btn"
+                        style={{
+                          width: '100%',
+                          marginTop: '10px',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          justifyContent: 'center'
+                        }}
+                        onClick={handleDeleteNote}
+                        disabled={deletingNote}
+                      >
+                        🗑️ {deletingNote ? 'Deleting...' : 'Delete Note'}
+                      </button>
                     </div>
                   </>
                 )}
@@ -1274,6 +1463,38 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="bottom-nav-bar">
+        <button 
+          className={`bottom-nav-item ${mobileTab === 'home' ? 'active' : ''}`}
+          onClick={() => setMobileTab('home')}
+        >
+          <Home size={20} />
+          <span>Home</span>
+        </button>
+        <button 
+          className={`bottom-nav-item ${mobileTab === 'folders' ? 'active' : ''}`}
+          onClick={() => setMobileTab('folders')}
+        >
+          <Folder size={20} />
+          <span>Folders</span>
+        </button>
+        <button 
+          className={`bottom-nav-item ${mobileTab === 'queue' ? 'active' : ''}`}
+          onClick={() => setMobileTab('queue')}
+        >
+          <RefreshCw size={20} />
+          <span>Queue</span>
+        </button>
+        <button 
+          className={`bottom-nav-item ${mobileTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setMobileTab('profile')}
+        >
+          <User size={20} />
+          <span>Profile</span>
+        </button>
+      </nav>
     </div>
   );
 }
