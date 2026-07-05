@@ -239,39 +239,62 @@ export default function App() {
 
   // Update Settings/API Keys
   const handleSaveSettings = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSettingsStatus('');
-    try {
-      const res = await fetch(`${API_URL}/api/settings`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-app-password': password
-        },
-        body: JSON.stringify({
-          geminiApiKey: geminiKey || undefined,
-          nvidiaApiKey: nvidiaKey || undefined,
-          apifyToken: apifyToken || undefined,
-          appPassword: newAppPassword || undefined
-        })
-      });
+    
+    // 1. Clean and save Server URL to localStorage
+    const cleanedUrl = serverUrl ? serverUrl.trim().replace(/\/$/, '') : '';
+    const oldUrl = localStorage.getItem('treemind_server_url') || '';
+    
+    if (cleanedUrl) {
+      localStorage.setItem('treemind_server_url', cleanedUrl);
+    } else {
+      localStorage.removeItem('treemind_server_url');
+    }
+    setServerUrl(cleanedUrl);
 
-      if (res.ok) {
-        setSettingsStatus('Settings saved successfully!');
-        if (newAppPassword) {
-          setPassword(newAppPassword);
-        } else {
-          fetchData();
+    // 2. If authenticated, try to save API keys to backend
+    let backendSaved = false;
+    if (isAuthenticated && (cleanedUrl || API_URL)) {
+      try {
+        const targetUrl = cleanedUrl || API_URL;
+        const res = await fetch(`${targetUrl}/api/settings`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-app-password': password
+          },
+          body: JSON.stringify({
+            geminiApiKey: geminiKey || undefined,
+            nvidiaApiKey: nvidiaKey || undefined,
+            apifyToken: apifyToken || undefined,
+            appPassword: newAppPassword || undefined
+          })
+        });
+
+        if (res.ok) {
+          backendSaved = true;
+          if (newAppPassword) {
+            setPassword(newAppPassword);
+          }
         }
-        setTimeout(() => {
-          setShowSettings(false);
-          setSettingsStatus('');
-        }, 1500);
-      } else {
-        setSettingsStatus('Failed to save settings.');
+      } catch (err) {
+        console.error('Failed to save backend settings:', err);
       }
-    } catch (e) {
-      setSettingsStatus('Error: ' + e.message);
+    }
+
+    setSettingsStatus('Settings saved successfully!');
+
+    // 3. Reload only if the Server URL changed (important for applying new API base URL)
+    if (cleanedUrl !== oldUrl) {
+      setSettingsStatus('Server URL changed. Reloading app...');
+      setTimeout(() => window.location.reload(), 500);
+    } else {
+      setTimeout(() => {
+        setShowSettings(false);
+        setSettingsStatus('');
+        fetchData();
+      }, 1500);
     }
   };
 
@@ -1133,17 +1156,7 @@ export default function App() {
                 </p>
               )}
 
-              <button type="button" className="action-btn" style={{ marginTop: '8px', justifyContent: 'center' }} onClick={() => {
-                const cleanedUrl = serverUrl ? serverUrl.trim().replace(/\/$/, '') : '';
-                if (cleanedUrl) {
-                  localStorage.setItem('treemind_server_url', cleanedUrl);
-                } else {
-                  localStorage.removeItem('treemind_server_url');
-                }
-                setServerUrl(cleanedUrl);
-                setSettingsStatus('Settings saved. Reloading...');
-                setTimeout(() => window.location.reload(), 300);
-              }}>
+              <button type="submit" className="action-btn" style={{ marginTop: '8px', justifyContent: 'center' }}>
                 Save Settings
               </button>
             </form>

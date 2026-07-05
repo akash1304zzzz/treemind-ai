@@ -53,24 +53,18 @@
     "thumbnailUrl": "/api/vault/thumbnails/pov_your_wife_is_your_dentist.jpg"
   },
   {
-    "id": "tradefinder_platform_analysis_strategy_1783025400",
-    "title": "TradeFinder Platform Analysis & Strategy",
+    "id": "untitled_note_1783201913",
+    "title": "Untitled Note",
     "url": "https://www.instagram.com/p/DaSlVcwAku5/",
-    "tags": [
-      "Trading",
-      "Technical Analysis",
-      "Options",
-      "Stock Market",
-      "TradeFinder"
-    ],
+    "tags": [],
     "categoryPath": [
       "Trading",
       "Platform Analysis"
     ],
-    "snippet": "A fine-grained study of TradeFinder.in trading features (Option Apex, Swing Spectrum, Market Pulse) and market entry strategy.",
-    "dateProcessed": "2026-07-02 22:50",
-    "filePath": "vault/Trading/Platform Analysis/tradefinder_platform_analysis_strategy.md",
-    "thumbnailUrl": "/api/vault/thumbnails/tradefinder_platform_analysis_strategy.jpg"
+    "snippet": "",
+    "dateProcessed": "2026-07-05 01:51",
+    "filePath": "vault/Trading/Platform Analysis/untitled_note.md",
+    "thumbnailUrl": ""
   },
   {
     "id": "untitled_note_1783109756",
@@ -89,6 +83,48 @@
     "snippet": "",
     "dateProcessed": "2026-07-04 00:15",
     "filePath": "vault/AI/Facebook Scrapers/untitled_note.md",
+    "thumbnailUrl": "/api/vault/thumbnails/untitled_note.jpg"
+  },
+  {
+    "id": "untitled_note_1783201734",
+    "title": "Untitled Note",
+    "url": "https://www.instagram.com/reel/DHTfK7jAih8/?igsh=ZGxrbnZyaTlxcWhm",
+    "tags": [],
+    "categoryPath": [
+      "AI",
+      "New Tech Stack"
+    ],
+    "snippet": "",
+    "dateProcessed": "2026-07-05 01:48",
+    "filePath": "vault/AI/New Tech Stack/untitled_note.md",
+    "thumbnailUrl": "/api/vault/thumbnails/untitled_note.jpg"
+  },
+  {
+    "id": "untitled_note_1783202162",
+    "title": "Untitled Note",
+    "url": "https://www.instagram.com/reel/DaShpVEBR_F/",
+    "tags": [],
+    "categoryPath": [
+      "AI",
+      "CRM Automation"
+    ],
+    "snippet": "",
+    "dateProcessed": "2026-07-05 01:56",
+    "filePath": "vault/AI/CRM Automation/untitled_note.md",
+    "thumbnailUrl": "https://scontent-bos5-1.cdninstagram.com/v/t51.82787-15/730881148_17896871043532068_314883287923166745_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-bos5-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2gEC7xswgTtl0wudjr36nUqvFNAXWp3JAz5PxmYYLtsMbmHUpQWiBmX9Xgz0F-_sicY&_nc_ohc=CLZOhG_DU4cQ7kNvwFRDV09&_nc_gid=5b05Iwvy-X5lawL5tfHdHw&edm=ADp7STQBAAAA&ccb=7-5&oh=00_AQAhDNcZqraibvjReIOtDc0I9lChvntt_v8IIIWNRRabWQ&oe=6A4F6548&_nc_sid=c6f216"
+  },
+  {
+    "id": "untitled_note_1783228217",
+    "title": "Untitled Note",
+    "url": "https://www.instagram.com/reel/DHTfK7jAih8/",
+    "tags": [],
+    "categoryPath": [
+      "AI",
+      "New Tech Stack"
+    ],
+    "snippet": "",
+    "dateProcessed": "2026-07-05 09:10",
+    "filePath": "vault/AI/New Tech Stack/untitled_note.md",
     "thumbnailUrl": "/api/vault/thumbnails/untitled_note.jpg"
   }
 ]

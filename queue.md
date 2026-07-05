@@ -14,3 +14,4 @@
 - [x] https://www.instagram.com/p/DaSlVcwAku5/ (Processed: 2026-07-05 01:51) (Depth: Quick Summary)
 - [x] https://www.instagram.com/reel/DaShpVEBR_F/ (Processed: 2026-07-05 01:56) (Depth: Quick Summary)
 
+- [x] https://www.instagram.com/reel/DHTfK7jAih8/ (Processed: 2026-07-05 09:10) (Depth: Detailed Notes)
