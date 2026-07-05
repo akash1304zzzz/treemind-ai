@@ -136,7 +136,8 @@ export default function App() {
     try {
       const headers = { 
         'x-app-password': pass,
-        'x-user-id': usrId
+        'x-user-id': usrId,
+        'Bypass-Tunnel-Reminder': 'true'
       };
       
       const [notesRes, queueRes] = await Promise.all([
@@ -178,7 +179,8 @@ export default function App() {
       const res = await fetch(`${API_URL}/api/vault/${encodedPath}`, {
         headers: { 
           'x-app-password': password,
-          'x-user-id': userId
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
         }
       });
       if (res.ok) {
@@ -207,7 +209,8 @@ export default function App() {
         headers: { 
           'Content-Type': 'application/json',
           'x-app-password': password,
-          'x-user-id': userId
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
         },
         body: JSON.stringify({ url: newUrl, depth })
       });
@@ -236,7 +239,8 @@ export default function App() {
         method: 'POST',
         headers: { 
           'x-app-password': password,
-          'x-user-id': userId
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
         }
       });
       const data = await res.json();
@@ -374,7 +378,8 @@ export default function App() {
         headers: { 
           'Content-Type': 'application/json',
           'x-app-password': password,
-          'x-user-id': userId
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
         },
         body: JSON.stringify({
           id: selectedNote.id,
@@ -424,7 +429,8 @@ export default function App() {
         headers: { 
           'Content-Type': 'application/json',
           'x-app-password': password,
-          'x-user-id': userId
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
         },
         body: JSON.stringify({ oldPath, newPath })
       });
