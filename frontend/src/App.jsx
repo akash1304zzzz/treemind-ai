@@ -84,6 +84,8 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState('home'); // 'home', 'folders', 'queue', 'profile'
   const [showIngestForm, setShowIngestForm] = useState(false);
   const [showAllNotes, setShowAllNotes] = useState(false);
+  const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
+  const [renameInputValue, setRenameInputValue] = useState('');
 
   // Authenticate on mount or password change
   useEffect(() => {
@@ -498,6 +500,57 @@ export default function App() {
     }
   };
 
+  const submitRenameCategory = async (oldPath, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      alert('Category name cannot be empty.');
+      return;
+    }
+    if (trimmed === oldPath[oldPath.length - 1]) {
+      setEditingCategoryPath(null);
+      return; // no change
+    }
+
+    const newPath = [...oldPath];
+    newPath[newPath.length - 1] = trimmed;
+
+    try {
+      const res = await fetch(`${API_URL}/api/category/rename`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-app-password': password,
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({ oldPath, newPath })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (activeCategory && activeCategory.root === oldPath[0]) {
+            if (oldPath.length === 1) {
+              setActiveCategory({ root: trimmed, sub: activeCategory.sub });
+            } else if (oldPath.length === 2 && activeCategory.sub === oldPath[1]) {
+              setActiveCategory({ root: activeCategory.root, sub: trimmed });
+            }
+          }
+          await fetchData();
+        } else {
+          alert('Failed to rename category.');
+        }
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || res.statusText));
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message);
+    } finally {
+      setEditingCategoryPath(null);
+    }
+  };
+
   const toggleCategoryExpand = (root) => {
     setExpandedCategories(prev => ({
       ...prev,
@@ -728,27 +781,44 @@ export default function App() {
             const subs = Array.from(categoriesMap[root]);
             const isExpanded = !!expandedCategories[root];
             const isRootActive = activeCategory?.root === root && !activeCategory.sub;
+            const isEditingRoot = editingCategoryPath && editingCategoryPath.length === 1 && editingCategoryPath[0] === root;
             
             return (
               <div key={root} className="cat-group">
-                <div className="cat-row">
-                  <button 
-                    className={`cat-btn ${isRootActive ? 'active' : ''}`}
-                    style={{ flexGrow: 1 }}
-                    onClick={() => { setActiveCategory({ root, sub: null }); setMobileTab('home'); }}
-                  >
-                    <span>{root}</span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRenameCategory([root]);
-                    }}
-                    className="cat-rename-icon-btn"
-                    title={`Rename category ${root}`}
-                  >
-                    <Edit2 size={12} />
-                  </button>
+                <div className="cat-row" style={{ alignItems: 'center' }}>
+                  {isEditingRoot ? (
+                    <input
+                      type="text"
+                      className="url-input"
+                      style={{ flexGrow: 1, padding: '8px 12px', fontSize: '13.5px', background: 'var(--bg-deep)', border: '1px solid var(--accent-primary)' }}
+                      value={renameInputValue}
+                      onChange={(e) => setRenameInputValue(e.target.value)}
+                      onBlur={() => submitRenameCategory([root], renameInputValue)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          submitRenameCategory([root], renameInputValue);
+                        } else if (e.key === 'Escape') {
+                          setEditingCategoryPath(null);
+                        }
+                      }}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <button 
+                      className={`cat-btn ${isRootActive ? 'active' : ''}`}
+                      style={{ flexGrow: 1 }}
+                      onClick={() => { setActiveCategory({ root, sub: null }); setMobileTab('home'); }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingCategoryPath([root]);
+                        setRenameInputValue(root);
+                      }}
+                      title="Double click to rename"
+                    >
+                      <span>{root}</span>
+                    </button>
+                  )}
                   {subs.length > 0 && (
                     <button 
                       onClick={() => toggleCategoryExpand(root)}
@@ -769,26 +839,44 @@ export default function App() {
                   <div className="sub-cat-container">
                     {subs.map((sub) => {
                       const isSubActive = activeCategory?.root === root && activeCategory?.sub === sub;
+                      const isEditingSub = editingCategoryPath && editingCategoryPath.length === 2 && editingCategoryPath[0] === root && editingCategoryPath[1] === sub;
+                      
                       return (
-                        <div key={sub} className="sub-cat-row">
-                          <button
-                            className={`sub-cat-btn ${isSubActive ? 'active' : ''}`}
-                            style={{ flexGrow: 1 }}
-                            onClick={() => { setActiveCategory({ root, sub }); setMobileTab('home'); }}
-                          >
-                            <ChevronRight size={10} />
-                            <span>{sub}</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRenameCategory([root, sub]);
-                            }}
-                            className="cat-rename-icon-btn"
-                            title={`Rename subcategory ${sub}`}
-                          >
-                            <Edit2 size={10} />
-                          </button>
+                        <div key={sub} className="sub-cat-row" style={{ alignItems: 'center' }}>
+                          {isEditingSub ? (
+                            <input
+                              type="text"
+                              className="url-input"
+                              style={{ flexGrow: 1, padding: '6px 10px', fontSize: '12.5px', background: 'var(--bg-deep)', border: '1px solid var(--accent-primary)' }}
+                              value={renameInputValue}
+                              onChange={(e) => setRenameInputValue(e.target.value)}
+                              onBlur={() => submitRenameCategory([root, sub], renameInputValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  submitRenameCategory([root, sub], renameInputValue);
+                                } else if (e.key === 'Escape') {
+                                  setEditingCategoryPath(null);
+                                }
+                              }}
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <button
+                              className={`sub-cat-btn ${isSubActive ? 'active' : ''}`}
+                              style={{ flexGrow: 1 }}
+                              onClick={() => { setActiveCategory({ root, sub }); setMobileTab('home'); }}
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCategoryPath([root, sub]);
+                                setRenameInputValue(sub);
+                              }}
+                              title="Double click to rename"
+                            >
+                              <ChevronRight size={10} />
+                              <span>{sub}</span>
+                            </button>
+                          )}
                         </div>
                       );
                     })}

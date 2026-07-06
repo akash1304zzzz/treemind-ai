@@ -937,4 +937,9 @@ body {
     border-bottom: none !important;
     overflow-y: auto !important;
   }
+
+  /* Hide settings/logout footer inside folders tab on mobile */
+  .sidebar-footer {
+    display: none !important;
+  }
 }
