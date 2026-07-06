@@ -1,30 +1,40 @@
 [
   {
-    "id": "untitled_note_1783268754",
-    "title": "Untitled Note",
+    "id": "dubai_dhow_cruise_experience_1783268754",
+    "title": "Dubai Dhow Cruise Experience",
     "url": "https://www.instagram.com/p/DZ5FEyUge-T/?igsh=Z2E1aHZzdnNseWZ1",
-    "tags": [],
+    "tags": [
+      "Dubai",
+      "dhow cruise",
+      "travel guide",
+      "Arabian heritage"
+    ],
     "categoryPath": [
       "Travel",
       "Dubai"
     ],
-    "snippet": "",
+    "snippet": "Discover the traditional Arabian dhow cruise along Dubai Creek, showcasing the city's heritage and modern evening skyline.",
     "dateProcessed": "2026-07-05 20:25",
-    "filePath": "vault/alpha/Travel/Dubai/untitled_note.md",
-    "thumbnailUrl": "/api/vault/alpha/thumbnails/untitled_note.jpg"
+    "filePath": "vault/alpha/Travel/Dubai/dubai_dhow_cruise_experience.md",
+    "thumbnailUrl": "/api/vault/alpha/thumbnails/dubai_dhow_cruise_experience.jpg"
   },
   {
-    "id": "untitled_note_1783269542",
-    "title": "Untitled Note",
+    "id": "google_maps_scraper_kit_1783269542",
+    "title": "Google Maps Scraper Kit",
     "url": "https://www.instagram.com/reel/DaNNCBxoyjk/?igsh=MW84Nm90M2xwMHNzdg==",
-    "tags": [],
+    "tags": [
+      "scraping",
+      "lead generation",
+      "Google Maps",
+      "marketing tools"
+    ],
     "categoryPath": [
       "Productivity",
       "Tools"
     ],
-    "snippet": "",
+    "snippet": "A complete guide to scraping business leads (emails, phone numbers, social profiles) using the Google Maps Scraper Kit.",
     "dateProcessed": "2026-07-05 20:39",
-    "filePath": "vault/alpha/Productivity/Tools/untitled_note.md",
-    "thumbnailUrl": "/api/vault/alpha/thumbnails/untitled_note.jpg"
+    "filePath": "vault/alpha/Productivity/Tools/google_maps_scraper_kit.md",
+    "thumbnailUrl": "/api/vault/alpha/thumbnails/google_maps_scraper_kit.jpg"
   }
 ]

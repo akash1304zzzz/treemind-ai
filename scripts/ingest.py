@@ -215,7 +215,7 @@ def call_nvidia_llm(prompt, api_key):
             "messages": [
                 {
                     "role": "user",
-                    "content": prompt + "\nRespond strictly in valid JSON format matching the schema."
+                    "content": prompt + "\nRespond strictly in valid JSON format matching this schema:\n{\n  \"title\": \"A clean, concise title for the note (string)\",\n  \"categoryPath\": [\"Category\", \"Subcategory\"] (array of 1-2 strings),\n  \"tags\": [\"tag1\", \"tag2\"] (array of 3-5 strings),\n  \"snippet\": \"A brief 20-30 word summary snippet for the index (string)\",\n  \"markdown\": \"The complete structured note content in Markdown. Do not include YAML frontmatter. (string)\"\n}"
                 }
             ],
             "temperature": 0.2,

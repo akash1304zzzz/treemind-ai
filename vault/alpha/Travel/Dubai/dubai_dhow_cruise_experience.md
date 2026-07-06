@@ -1,8 +1,8 @@
 ---
-title: "Untitled Note"
+title: "Dubai Dhow Cruise Experience"
 source: https://www.instagram.com/p/DZ5FEyUge-T/?igsh=Z2E1aHZzdnNseWZ1
 date_processed: 2026-07-05 20:25
-tags: []
+tags: ["Dubai", "dhow cruise", "travel guide", "Arabian heritage"]
 category: "Travel / Dubai"
 ---
 

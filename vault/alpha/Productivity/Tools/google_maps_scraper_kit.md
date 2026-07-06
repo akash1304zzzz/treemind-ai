@@ -1,8 +1,8 @@
 ---
-title: "Untitled Note"
+title: "Google Maps Scraper Kit"
 source: https://www.instagram.com/reel/DaNNCBxoyjk/?igsh=MW84Nm90M2xwMHNzdg==
 date_processed: 2026-07-05 20:39
-tags: []
+tags: ["scraping", "lead generation", "Google Maps", "marketing tools"]
 category: "Productivity / Tools"
 ---
 
