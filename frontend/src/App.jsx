@@ -19,7 +19,8 @@ import {
   FileText,
   Edit2,
   Home,
-  User
+  User,
+  Camera
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
@@ -81,6 +82,8 @@ export default function App() {
   const [savingMeta, setSavingMeta] = useState(false);
   const [deletingNote, setDeletingNote] = useState(false);
   const [mobileTab, setMobileTab] = useState('home'); // 'home', 'folders', 'queue', 'profile'
+  const [showIngestForm, setShowIngestForm] = useState(false);
+  const [showAllNotes, setShowAllNotes] = useState(false);
 
   // Authenticate on mount or password change
   useEffect(() => {
@@ -902,116 +905,249 @@ export default function App() {
             )}
           </div>
         </header>
-
-        {/* Queue URL Paste Box */}
+        {/* Minimalist Ingest Button & Form Drawer */}
         {mobileTab === 'home' && (
-          <section className="paste-container glass-panel">
-            <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <Plus size={20} color="var(--text-muted)" />
-              <input 
-                type="url" 
-                className="url-input"
-                placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..." 
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                required
-              />
-              <select 
-                className="depth-select"
-                value={depth}
-                onChange={(e) => setDepth(e.target.value)}
-              >
-                <option value="Quick Summary">Quick Summary</option>
-                <option value="Detailed Notes">Detailed Notes</option>
-                <option value="Fine-Grained Study">Fine-Grained Study</option>
-              </select>
-              <button type="submit" className="action-btn">
-                Queue Ingest
-              </button>
-              <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '24px 0', width: '100%', boxSizing: 'border-box' }}>
+            {!showIngestForm ? (
               <button 
-                type="button"
+                onClick={() => setShowIngestForm(true)}
                 className="action-btn"
                 style={{
-                  background: isIngesting ? '#7c3aed' : 'rgba(236, 72, 153, 0.15)',
-                  border: '1px solid rgba(236, 72, 153, 0.3)',
-                  color: '#f472b6',
+                  background: '#0f172a',
+                  color: '#fff',
+                  borderRadius: '24px',
+                  padding: '14px 32px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  boxShadow: 'var(--shadow-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
                 }}
-                onClick={triggerIngestion}
-                disabled={isIngesting}
               >
-                <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
-                <span>{isIngesting ? 'Processing Ingestion...' : 'Process Queue'}</span>
+                <Plus size={18} />
+                <span>Ingest Link</span>
               </button>
-            </form>
-          </section>
+            ) : (
+              <section className="paste-container glass-panel" style={{ width: 'calc(100% - 80px)', margin: '0 40px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Paste Source URL</span>
+                  <button 
+                    onClick={() => setShowIngestForm(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <form onSubmit={(e) => { handleAddToQueue(e); setShowIngestForm(false); }} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input 
+                    type="url" 
+                    className="url-input"
+                    placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..." 
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    required
+                  />
+                  <select 
+                    className="depth-select"
+                    value={depth}
+                    onChange={(e) => setDepth(e.target.value)}
+                  >
+                    <option value="Quick Summary">Quick Summary</option>
+                    <option value="Detailed Notes">Detailed Notes</option>
+                    <option value="Fine-Grained Study">Fine-Grained Study</option>
+                  </select>
+                  <button type="submit" className="action-btn" style={{ background: '#0f172a' }}>
+                    Queue Ingest
+                  </button>
+                  <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
+                  <button 
+                    type="button"
+                    className="action-btn"
+                    style={{
+                      background: isIngesting ? '#7c3aed' : 'rgba(236, 72, 153, 0.15)',
+                      border: '1px solid rgba(236, 72, 153, 0.3)',
+                      color: '#f472b6',
+                    }}
+                    onClick={triggerIngestion}
+                    disabled={isIngesting}
+                  >
+                    <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
+                    <span>{isIngesting ? 'Processing Ingestion...' : 'Process Queue'}</span>
+                  </button>
+                </form>
+              </section>
+            )}
+          </div>
         )}
 
-        {/* Dashboard Grid */}
+        {/* Dashboard Grid / Recent List Toggle */}
         {mobileTab === 'home' && (
           <section className="content-area">
-            {filteredNotes.length === 0 ? (
-              <div className="empty-state">
-                <Folder size={48} style={{ strokeWidth: 1.2, color: 'var(--text-muted)', marginBottom: 16 }} />
-                <h3>No Notes Found</h3>
-                <p style={{ fontSize: 13, marginTop: 4, maxWidth: 320 }}>
-                  {searchQuery ? 'Try adjusting your search terms.' : 'Paste a video URL above and hit Queue Ingest to organize your PKM tree.'}
-                </p>
-              </div>
-            ) : (
-              <div className="grid-layout">
-                {filteredNotes.map((note) => {
-                  const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
-                  const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
-                  return (
-                    <div 
-                      key={note.id} 
-                      className="clip-card glass-panel"
-                      onClick={() => loadNoteContent(note)}
+            {(searchQuery.trim().length > 0 || showAllNotes) ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700 }}>
+                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Processing History'}
+                  </h3>
+                  {showAllNotes && !searchQuery && (
+                    <button 
+                      onClick={() => setShowAllNotes(false)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--accent-primary)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 600
+                      }}
                     >
-                      <div className="clip-card-body" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                            <span style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                              {isYoutube ? 'YouTube' : isFacebook ? 'Facebook' : 'Instagram'}
-                            </span>
-                            <span className="clip-date" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{note.dateProcessed}</span>
-                          </div>
-                          <h3 className="clip-title" style={{ marginTop: '4px', fontSize: 16, lineHeight: 1.4, color: 'var(--text-primary)', fontWeight: 600 }}>{note.title}</h3>
-                          <p className="clip-snippet" style={{ color: 'var(--text-secondary)', fontSize: 13, display: '-webkit-box', WebKitLineClamp: 3, WebKitBoxOrient: 'vertical', overflow: 'hidden', margin: '8px 0 16px 0', lineHeight: 1.5 }}>
-                            {note.snippet || 'No description preview available.'}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-                            {note.tags && note.tags.length > 0 ? (
-                              note.tags.slice(0, 4).map(tag => (
-                                <span key={tag} className="tag-badge" style={{ fontSize: 11 }}>{tag}</span>
-                              ))
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: 11, fontStyle: 'italic' }}>No tags</span>
-                            )}
-                          </div>
+                      Show Less
+                    </button>
+                  )}
+                </div>
+                
+                {filteredNotes.length === 0 ? (
+                  <div className="empty-state">
+                    <Folder size={48} style={{ strokeWidth: 1.2, color: 'var(--text-muted)', marginBottom: 16 }} />
+                    <h3>No Notes Found</h3>
+                    <p style={{ fontSize: 13, marginTop: 4, maxWidth: 320 }}>
+                      {searchQuery ? 'Try adjusting your search terms.' : 'Paste a video URL above and hit Queue Ingest.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid-layout">
+                    {filteredNotes.map((note) => {
+                      const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
+                      const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
+                      return (
+                        <div 
+                          key={note.id} 
+                          className="clip-card glass-panel"
+                          onClick={() => loadNoteContent(note)}
+                        >
+                          <div className="clip-card-body" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                <span style={{ fontSize: 10, color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                  {isYoutube ? 'YouTube' : isFacebook ? 'Facebook' : 'Instagram'}
+                                </span>
+                                <span className="clip-date" style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{note.dateProcessed}</span>
+                              </div>
+                              <h3 className="clip-title" style={{ marginTop: '4px', fontSize: 16, lineHeight: 1.4, color: 'var(--text-primary)', fontWeight: 600 }}>{note.title}</h3>
+                              <p className="clip-snippet" style={{ color: 'var(--text-secondary)', fontSize: 13, display: '-webkit-box', WebKitLineClamp: 3, WebKitBoxOrient: 'vertical', overflow: 'hidden', margin: '8px 0 16px 0', lineHeight: 1.5 }}>
+                                {note.snippet || 'No description preview available.'}
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                                {note.tags && note.tags.length > 0 ? (
+                                  note.tags.slice(0, 4).map(tag => (
+                                    <span key={tag} className="tag-badge" style={{ fontSize: 11 }}>{tag}</span>
+                                  ))
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)', fontSize: 11, fontStyle: 'italic' }}>No tags</span>
+                                )}
+                              </div>
 
-                          <div className="clip-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span className="tag-badge" style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {note.categoryPath ? note.categoryPath.join(' › ') : 'General'}
-                            </span>
-                            <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>Read Note</span>
-                              <ChevronRight size={12} />
-                            </span>
+                              <div className="clip-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span className="tag-badge" style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {note.categoryPath ? note.categoryPath.join(' • ') : 'General'}
+                                </span>
+                                <span style={{ fontSize: 11, color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span>Read Note</span>
+                                  <ChevronRight size={12} />
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Minimalist Recent Processing list matching Stitch mockup */
+              <div className="recent-processing-container" style={{ maxWidth: '600px', margin: '16px auto', width: '100%' }}>
+                <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '16px', paddingLeft: '8px' }}>Recent Processing</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
+                  {filteredNotes.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>
+                      No notes processed yet. Paste a link above to start!
                     </div>
-                  );
-                })}
+                  ) : (
+                    filteredNotes.slice(0, 3).map((note) => {
+                      const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
+                      const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
+                      
+                      // Icons matching Stitch styles
+                      const iconColor = isYoutube ? '#ba1a1a' : isFacebook ? '#006591' : '#db2777';
+                      const IconComponent = isYoutube ? Play : isFacebook ? FileText : Camera;
+                      
+                      return (
+                        <div 
+                          key={note.id} 
+                          onClick={() => loadNoteContent(note)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '18px 24px',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s',
+                          }}
+                          className="recent-row-item"
+                        >
+                          <div style={{ marginRight: '16px', display: 'flex', alignItems: 'center' }}>
+                            <IconComponent size={20} color={iconColor} style={{ fill: isYoutube ? 'rgba(186, 26, 26, 0.1)' : 'none' }} />
+                          </div>
+                          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flexGrow: 1, marginRight: '16px' }}>
+                            {note.title}
+                          </span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {note.dateProcessed.split(' ')[0]}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                
+                {filteredNotes.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+                    <button 
+                      onClick={() => setShowAllNotes(true)}
+                      className="view-all-btn"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 24px',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-elevated)',
+                        borderRadius: '24px',
+                        color: 'var(--accent-primary)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span>View All Recent</span>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </section>
         )}
+
 
         {/* Mobile Queue View */}
         {mobileTab === 'queue' && (
