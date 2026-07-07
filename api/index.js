@@ -1,1 +1,2 @@
-module.exports = require('./backend/index.js');
+module.exports = require('../backend/index.js');
+
