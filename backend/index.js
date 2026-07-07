@@ -716,6 +716,13 @@ app.get('*', (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[TreeMind AI Local Server] running on http://0.0.0.0:${PORT}`);
-});
+// Export for Vercel serverless deployment
+module.exports = app;
+
+// Start local server when not in a serverless environment
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[TreeMind AI Local Server] running on http://0.0.0.0:${PORT}`);
+  });
+}
+

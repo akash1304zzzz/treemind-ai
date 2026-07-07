@@ -1,28 +1,23 @@
 {
-      "services": {
-              "frontend": {
-                        "root": "frontend",
-                        "framework": "vite"
-              },
-              "backend": {
-                        "root": "backend",
-                        "entrypoint": "index.js"
-              }
-      },
-      "rewrites": [
-              {
-                        "source": "/api(/.*)?",
-                        "destination": {
-                                    "type": "service",
-                                    "service": "backend"
-                        }
-              },
-              {
-                        "source": "/(.*)",
-                        "destination": {
-                                    "type": "service",
-                                    "service": "frontend"
-                        }
-              }
-      ]
+  "version": 2,
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "cd backend && npm install",
+  "framework": null,
+  "functions": {
+    "backend/index.js": {
+      "runtime": "nodejs20.x",
+      "memory": 512
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/$1"
+    }
+  ]
 }
