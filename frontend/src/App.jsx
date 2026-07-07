@@ -83,6 +83,7 @@ export default function App() {
   const [deletingNote, setDeletingNote] = useState(false);
   const [mobileTab, setMobileTab] = useState('home'); // 'home', 'folders', 'queue', 'profile'
   const [showIngestForm, setShowIngestForm] = useState(false);
+  const [urlQueued, setUrlQueued] = useState(false); // brief success flash after queuing
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
   const [renameInputValue, setRenameInputValue] = useState('');
@@ -225,11 +226,11 @@ export default function App() {
       });
 
       if (res.ok) {
-        setNewUrl('');
-        fetchData();
-        // Open console automatically to encourage sync
+        setUrlQueued(true);
         setShowConsole(true);
         setConsoleLogs(prev => prev + `[System] Queued URL: ${newUrl} with depth: ${depth}\n`);
+        // Flash success for 2 seconds then clear input but keep form open
+        setTimeout(() => { setUrlQueued(false); setNewUrl(''); fetchData(); }, 2000);
       } else {
         alert('Failed to queue URL');
       }
@@ -1030,7 +1031,7 @@ export default function App() {
                     <X size={16} />
                   </button>
                 </div>
-                <form onSubmit={(e) => { handleAddToQueue(e); setShowIngestForm(false); }} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <input 
                     type="url" 
                     className="url-input"
@@ -1048,8 +1049,8 @@ export default function App() {
                     <option value="Detailed Notes">Detailed Notes</option>
                     <option value="Fine-Grained Study">Fine-Grained Study</option>
                   </select>
-                  <button type="submit" className="action-btn" style={{ background: '#0f172a' }}>
-                    Queue Ingest
+                  <button type="submit" className="action-btn" style={{ background: urlQueued ? '#16a34a' : '#0f172a', transition: 'background 0.3s' }}>
+                    {urlQueued ? '✓ Queued!' : 'Queue Ingest'}
                   </button>
                   <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
                   <button 

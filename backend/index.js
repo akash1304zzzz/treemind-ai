@@ -124,32 +124,31 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   }
   
   const userId = req.headers['x-user-id'] || 'default';
+  const { queuePath } = getUserPaths(userId);
+  const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+  const depthVal = depth || 'Detailed Notes';
 
+  // Always write to local queue.md — Python ingest script reads from here
+  const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})\n`;
+  fs.appendFileSync(queuePath, newLine, 'utf8');
+
+  // Also write to Supabase if available (for cloud/Vercel deployments)
   if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
     try {
-      const { error } = await supabase
+      await supabase
         .from('queue')
         .insert({
           user_id: userId,
           url,
-          depth: depth || 'Detailed Notes',
+          depth: depthVal,
           status: 'pending'
         });
-
-      if (error) throw error;
-      return res.json({ success: true, message: 'URL added to queue successfully.' });
     } catch (err) {
-      console.error('[Supabase Queue Insert Error]:', err.message);
+      console.error('[Supabase Queue Insert Warning]:', err.message);
+      // Non-fatal: local queue.md write already succeeded
     }
   }
 
-  const { queuePath } = getUserPaths(userId);
-  const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-  const depthVal = depth || 'Detailed Notes';
-  
-  const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})\n`;
-  
-  fs.appendFileSync(queuePath, newLine, 'utf8');
   res.json({ success: true, message: 'URL added to queue successfully.' });
 });
 

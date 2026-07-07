@@ -1,22 +1,23 @@
 [
   {
-    "id": "dubai_dhow_cruise_experience_1783268754",
-    "title": "Dubai Dhow Cruise Experience",
+    "id": "dubai_dhow_cruise_offers_1783427519",
+    "title": "Dubai Dhow Cruise Offers",
     "url": "https://www.instagram.com/p/DZ5FEyUge-T/?igsh=Z2E1aHZzdnNseWZ1",
     "tags": [
       "Dubai",
-      "dhow cruise",
-      "travel guide",
-      "Arabian heritage"
+      "Dhow Cruise",
+      "Travel Offers",
+      "Tourism",
+      "Middle East"
     ],
     "categoryPath": [
       "Travel",
       "Dubai"
     ],
-    "snippet": "Discover the traditional Arabian dhow cruise along Dubai Creek, showcasing the city's heritage and modern evening skyline.",
-    "dateProcessed": "2026-07-05 20:25",
-    "filePath": "vault/alpha/Travel/Dubai/dubai_dhow_cruise_experience.md",
-    "thumbnailUrl": "/api/vault/alpha/thumbnails/dubai_dhow_cruise_experience.jpg"
+    "snippet": "Dubai Dhow Cruise Offers and travel information",
+    "dateProcessed": "2026-07-07 16:32",
+    "filePath": "vault/alpha/Travel/Dubai/dubai_dhow_cruise_offers.md",
+    "thumbnailUrl": "/api/vault/alpha/thumbnails/dubai_dhow_cruise_offers.jpg"
   },
   {
     "id": "google_maps_scraper_kit_1783269542",
