@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const supabase = require('./supabaseClient');
+const { ingestQueue } = require('./ingest');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
@@ -299,34 +300,43 @@ app.post('/api/settings', authMiddleware, (req, res) => {
 });
 
 // 6. Ingest Trigger Endpoint
-app.post('/api/ingest', authMiddleware, (req, res) => {
+app.post('/api/ingest', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
-  const { vaultDir, queuePath } = getUserPaths(userId);
   console.log(`Triggering queue ingestion process for user: ${userId}...`);
-  const ingestScript = path.join(__dirname, '../scripts/ingest.py');
   
-  const command = `python "${ingestScript}" --queue "${queuePath}" --vault "${vaultDir}"`;
-  
-  exec(command, { env: process.env, cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Ingestion error: ${error.message}`);
-      console.error(`stdout: ${stdout}`);
-      console.error(`stderr: ${stderr}`);
-      return res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        stdout: stdout,
-        stderr: stderr
+  const logs = [];
+  const logCallback = (msg) => {
+    console.log(msg);
+    logs.push(msg);
+  };
+
+  try {
+    const result = await ingestQueue(userId, getUserPaths, logCallback);
+    
+    if (result.success) {
+      console.log('Ingestion finished successfully.');
+      res.json({
+        success: true,
+        stdout: logs.join('\n'),
+        stderr: ''
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        stdout: logs.join('\n'),
+        stderr: result.error
       });
     }
-    
-    console.log('Ingestion finished successfully.');
-    res.json({ 
-      success: true, 
-      stdout: stdout,
-      stderr: stderr
+  } catch (err) {
+    console.error('Ingestion failed with exception:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      stdout: logs.join('\n'),
+      stderr: err.stack
     });
-  });
+  }
 });
 
 // 7. Update Note Metadata (Category & Tags)

@@ -959,7 +959,7 @@ export default function App() {
             <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
               {mobileTab === 'queue' ? `${queue.filter(q => !q.processed).length} pending items` :
                mobileTab === 'profile' ? `Vault ID: ${userId}` :
-               `${filteredNotes.length} notes processed`}
+               `${notes.length} note${notes.length !== 1 ? 's' : ''} processed`}
             </p>
           </div>
 
