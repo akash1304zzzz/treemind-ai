@@ -3,6 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const supabase = require('./supabaseClient');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
@@ -55,8 +56,35 @@ app.post('/api/login', (req, res) => {
 });
 
 // 2. Queue Endpoints
-app.get('/api/queue', authMiddleware, (req, res) => {
+app.get('/api/queue', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
+  
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data, error } = await supabase
+        .from('queue')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date_added', { ascending: false });
+
+      if (error) throw error;
+      
+      const queue = data.map(item => {
+        const addedStr = item.date_added ? (item.date_added instanceof Date ? item.date_added.toISOString() : String(item.date_added)).replace('T', ' ').substring(0, 16) : '';
+        return {
+          url: item.url,
+          processed: item.status === 'completed',
+          addedTime: addedStr,
+          processedTime: item.status === 'completed' ? addedStr : '',
+          depth: item.depth
+        };
+      });
+      return res.json(queue);
+    } catch (err) {
+      console.error('[Supabase Queue Get Error]:', err.message);
+    }
+  }
+
   const { queuePath } = getUserPaths(userId);
   if (!fs.existsSync(queuePath)) {
     return res.json([]);
@@ -65,9 +93,6 @@ app.get('/api/queue', authMiddleware, (req, res) => {
   const content = fs.readFileSync(queuePath, 'utf8');
   const lines = content.split('\n');
   const queue = [];
-  
-  // Regex to match: - [ ] URL (Added: TIMESTAMP) (Depth: DEPTH)
-  // or: - [x] URL (Processed: TIMESTAMP) (Depth: DEPTH)
   const pattern = /^\s*-\s*\[\s*([ xX])\s*\]\s*(https:\/\/[^\s()]+)(?:\s*\((Added|Processed):\s*([^)]+)\))?(?:\s*\(Depth:\s*([^)]+)\))?/;
   
   lines.forEach((line) => {
@@ -75,7 +100,7 @@ app.get('/api/queue', authMiddleware, (req, res) => {
     if (match) {
       const isProcessed = match[1].toLowerCase() === 'x';
       const url = match[2];
-      const timeType = match[3]; // Added or Processed
+      const timeType = match[3];
       const timeVal = match[4] || '';
       const depth = match[5] || 'Detailed Notes';
       
@@ -92,13 +117,32 @@ app.get('/api/queue', authMiddleware, (req, res) => {
   res.json(queue);
 });
 
-app.post('/api/queue', authMiddleware, (req, res) => {
+app.post('/api/queue', authMiddleware, async (req, res) => {
   const { url, depth } = req.body;
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
   
   const userId = req.headers['x-user-id'] || 'default';
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { error } = await supabase
+        .from('queue')
+        .insert({
+          user_id: userId,
+          url,
+          depth: depth || 'Detailed Notes',
+          status: 'pending'
+        });
+
+      if (error) throw error;
+      return res.json({ success: true, message: 'URL added to queue successfully.' });
+    } catch (err) {
+      console.error('[Supabase Queue Insert Error]:', err.message);
+    }
+  }
+
   const { queuePath } = getUserPaths(userId);
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
   const depthVal = depth || 'Detailed Notes';
@@ -110,8 +154,39 @@ app.post('/api/queue', authMiddleware, (req, res) => {
 });
 
 // 3. Tree JSON Index Endpoint
-app.get('/api/tree', authMiddleware, (req, res) => {
+app.get('/api/tree', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      
+      const formatted = data.map(note => ({
+        id: note.id,
+        title: note.title,
+        url: note.url,
+        tags: note.tags || [],
+        categoryPath: note.category_path || [],
+        snippet: note.snippet || '',
+        dateProcessed: note.date_processed ? (note.date_processed instanceof Date ? note.date_processed.toISOString() : String(note.date_processed)).replace('T', ' ').substring(0, 16) : '',
+        filePath: note.file_path || '',
+        thumbnailUrl: note.thumbnail_url || ''
+      }));
+      
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      return res.json(formatted);
+    } catch (err) {
+      console.error('[Supabase Tree Get Error]:', err.message);
+    }
+  }
+
   const { treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.json([]);
@@ -129,16 +204,47 @@ app.get('/api/tree', authMiddleware, (req, res) => {
 });
 
 // 4. Vault Files Static Access
-app.use('/api/vault', authMiddleware, (req, res, next) => {
+app.use('/api/vault', authMiddleware, async (req, res, next) => {
   const userId = req.headers['x-user-id'] || req.query.userId || 'default';
   const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
   const requestedPath = path.normalize(req.path).replace(/\\/g, '/');
   
-  if (requestedPath.startsWith(`/${safeUserId}/`)) {
-    next();
-  } else {
-    res.status(403).json({ error: 'Access denied to this vault.' });
+  if (!requestedPath.startsWith(`/${safeUserId}/`)) {
+    return res.status(403).json({ error: 'Access denied to this vault.' });
   }
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      // 1. Handle thumbnails redirection to Supabase public bucket
+      if (requestedPath.includes('/thumbnails/')) {
+        const filename = path.basename(requestedPath);
+        const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/thumbnails/${filename}`;
+        return res.redirect(publicUrl);
+      }
+
+      // 2. Handle note Markdown content read from database
+      if (requestedPath.endsWith('.md')) {
+        const relativeFilePath = `vault${requestedPath}`; // e.g. "vault/alpha/Travel/Dubai/note.md"
+        const { data, error } = await supabase
+          .from('notes')
+          .select('markdown_content')
+          .eq('user_id', safeUserId)
+          .eq('file_path', relativeFilePath)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data) {
+          res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          return res.send(data.markdown_content);
+        }
+      }
+    } catch (err) {
+      console.error('[Supabase Vault Static Error]:', err.message);
+    }
+  }
+
+  next();
 }, express.static(path.join(__dirname, '../vault'), {
   setHeaders: (res, path) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -225,7 +331,7 @@ app.post('/api/ingest', authMiddleware, (req, res) => {
 });
 
 // 7. Update Note Metadata (Category & Tags)
-app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
+app.post('/api/note/update-metadata', authMiddleware, async (req, res) => {
   const { id, categoryPath, tags } = req.body;
   
   if (!id || !categoryPath || !Array.isArray(categoryPath) || !tags || !Array.isArray(tags)) {
@@ -233,6 +339,66 @@ app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
   }
 
   const userId = req.headers['x-user-id'] || 'default';
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data: note, error: fetchErr } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (fetchErr) throw fetchErr;
+      if (!note) return res.status(404).json({ error: 'Note not found.' });
+
+      const filename = path.basename(note.file_path);
+      const newRelativePath = `vault/${userId}/${categoryPath.join('/')}/${filename}`.replace(/\\/g, '/');
+
+      let updatedMarkdown = note.markdown_content || '';
+      const match = updatedMarkdown.match(/^---([\s\S]*?)---\n*([\s\S]*)$/);
+      if (match) {
+        const frontmatterText = match[1];
+        const markdownBody = match[2];
+        const lines = frontmatterText.split('\n');
+        const updatedLines = lines.map(line => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('tags:')) return `tags: ${JSON.stringify(tags)}`;
+          if (trimmed.startsWith('category:')) return `category: "${categoryPath.join(' / ')}"`;
+          return line;
+        });
+        updatedMarkdown = `---\n${updatedLines.join('\n')}\n---\n\n${markdownBody.trim()}\n`;
+      }
+
+      const { error: updateErr } = await supabase
+        .from('notes')
+        .update({
+          category_path: categoryPath,
+          tags: tags,
+          file_path: newRelativePath,
+          markdown_content: updatedMarkdown
+        })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (updateErr) throw updateErr;
+
+      return res.json({ success: true, note: {
+        id: note.id,
+        title: note.title,
+        url: note.url,
+        tags: tags,
+        categoryPath: categoryPath,
+        snippet: note.snippet,
+        dateProcessed: note.date_processed,
+        filePath: newRelativePath,
+        thumbnailUrl: note.thumbnail_url
+      }});
+    } catch (err) {
+      console.error('[Supabase Metadata Update Error]:', err.message);
+    }
+  }
+
   const { vaultDir, treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.status(404).json({ error: 'Vault tree index file not found.' });
@@ -313,7 +479,7 @@ app.post('/api/note/update-metadata', authMiddleware, (req, res) => {
 });
 
 // 8. Rename Category (Mass Relocation)
-app.post('/api/category/rename', authMiddleware, (req, res) => {
+app.post('/api/category/rename', authMiddleware, async (req, res) => {
   const { oldPath, newPath } = req.body;
   
   if (!oldPath || !Array.isArray(oldPath) || !newPath || !Array.isArray(newPath)) {
@@ -321,6 +487,59 @@ app.post('/api/category/rename', authMiddleware, (req, res) => {
   }
 
   const userId = req.headers['x-user-id'] || 'default';
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data: notes, error: fetchErr } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (fetchErr) throw fetchErr;
+
+      let renamedCount = 0;
+      for (const note of notes) {
+        const matches = oldPath.every((val, index) => note.category_path && note.category_path[index] === val);
+        if (matches) {
+          const suffix = note.category_path.slice(oldPath.length);
+          const updatedCategoryPath = [...newPath, ...suffix];
+          const filename = path.basename(note.file_path);
+          const newRelativePath = `vault/${userId}/${updatedCategoryPath.join('/')}/${filename}`.replace(/\\/g, '/');
+
+          let updatedMarkdown = note.markdown_content || '';
+          const matchFM = updatedMarkdown.match(/^---([\s\S]*?)---\n*([\s\S]*)$/);
+          if (matchFM) {
+            const frontmatterText = matchFM[1];
+            const markdownBody = matchFM[2];
+            const lines = frontmatterText.split('\n');
+            const updatedLines = lines.map(line => {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('category:')) return `category: "${updatedCategoryPath.join(' / ')}"`;
+              return line;
+            });
+            updatedMarkdown = `---\n${updatedLines.join('\n')}\n---\n\n${markdownBody.trim()}\n`;
+          }
+
+          const { error: updateErr } = await supabase
+            .from('notes')
+            .update({
+              category_path: updatedCategoryPath,
+              file_path: newRelativePath,
+              markdown_content: updatedMarkdown
+            })
+            .eq('id', note.id);
+
+          if (updateErr) throw updateErr;
+          renamedCount++;
+        }
+      }
+
+      return res.json({ success: true, renamedCount });
+    } catch (err) {
+      console.error('[Supabase Category Rename Error]:', err.message);
+    }
+  }
+
   const { vaultDir, treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.status(404).json({ error: 'Vault tree index file not found.' });
@@ -398,13 +617,35 @@ app.post('/api/category/rename', authMiddleware, (req, res) => {
 });
 
 // 9. Delete Note Route
-app.post('/api/note/delete', authMiddleware, (req, res) => {
+app.post('/api/note/delete', authMiddleware, async (req, res) => {
   const { id } = req.body;
   if (!id) {
     return res.status(400).json({ error: 'Note ID is required.' });
   }
 
   const userId = req.headers['x-user-id'] || 'default';
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { error: dbErr } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (dbErr) throw dbErr;
+
+      const filename = `${id}.jpg`;
+      await supabase.storage
+        .from('thumbnails')
+        .remove([filename]);
+
+      return res.json({ success: true, message: 'Note deleted successfully.' });
+    } catch (err) {
+      console.error('[Supabase Note Delete Error]:', err.message);
+    }
+  }
+
   const { vaultDir, treePath } = getUserPaths(userId);
   if (!fs.existsSync(treePath)) {
     return res.status(404).json({ error: 'Vault tree index file not found.' });
