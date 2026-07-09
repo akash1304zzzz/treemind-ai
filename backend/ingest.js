@@ -425,7 +425,8 @@ Return the response strictly inside the JSON schema.`;
     let responseJson = null;
     try {
       if (nvidiaKey) {
-        logger(`[LLM] Calling NVIDIA NIM API (Llama-3.1-70b-instruct)...`);
+        const modelName = isSupabase ? 'meta/llama-3.1-8b-instruct' : 'meta/llama-3.1-70b-instruct';
+        logger(`[LLM] Calling NVIDIA NIM API (${modelName})...`);
         const res = await fetchWithRetry('https://integrate.api.nvidia.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -433,7 +434,7 @@ Return the response strictly inside the JSON schema.`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'meta/llama-3.1-70b-instruct',
+            model: modelName,
             messages: [
               {
                 role: 'user',
