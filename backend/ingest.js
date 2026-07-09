@@ -393,7 +393,9 @@ async function ingestQueue(userId, getUserPaths, logger) {
     }
 
     if (!scrapedMeta) {
-      logger(`[Error] Failed to retrieve any metadata for: ${url}. Skipping.`);
+      logger(`[Error] Failed to retrieve any metadata for: ${url}. Marking as processed to prevent blocking.`);
+      await markQueueItemCompleted(item, dateFormatted, isSupabase, queuePath, url, depth, logger);
+      processedCount++;
       continue;
     }
 
