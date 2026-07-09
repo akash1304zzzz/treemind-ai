@@ -1,13 +1,9 @@
 ---
 title: "Google Maps Scraper Kit"
 source: https://www.instagram.com/reel/DaNNCBxoyjk/?igsh=MW84Nm90M2xwMHNzdg==
-date_processed: 2026-07-05 20:39
-tags: ["scraping", "lead generation", "Google Maps", "marketing tools"]
+date_processed: 2026-07-07 14:41
+tags: ["Google Maps","Lead Generation","Sales","Marketing"]
 category: "Productivity / Tools"
 ---
 
-- Scrape Google Maps leads with business names, emails, phone numbers, websites, addresses, and even social media profiles using the Google Maps Scraper Kit.
-- The kit is perfect for agencies, local businesses, sales teams, and cold outreach.
-- The repository can be accessed by commenting 'MAPS' or through the link: https://github.com/Mahanaicoach/google-maps-scraper-kit.
-- The tool can help with lead generation, sales outreach, and market research.
-- It can also be used for competitor analysis and business intelligence.
+# Google Maps Scraper Kit Detailed Notes ## Overview The Google Maps Scraper Kit is a tool designed to scrape Google Maps leads with business names, emails, phone numbers, websites, addresses, and even social media profiles. This kit is perfect for agencies, local businesses, sales teams, and cold outreach. ## Key Features * Scrape business names, emails, phone numbers, websites, addresses, and social media profiles from Google Maps * Ideal for agencies, local businesses, sales teams, and cold outreach * Available on GitHub: https://github.com/Mahanaicoach/google-maps-scraper-kit ## Use Cases * Agencies: Use the scraper kit to gather leads for clients and expand their online presence * Local businesses: Utilize the kit to find potential customers and partners in their area * Sales teams: Leverage the kit to generate leads and increase sales * Cold outreach: Employ the kit to find and connect with potential customers ## Benefits * Save time and effort by automating the lead generation process * Increase sales and revenue by targeting potential customers * Enhance online presence by gathering and utilizing business information * Improve marketing efforts by leveraging social media profiles and other business data ## How to Access The Google Maps Scraper Kit is available on GitHub. To access the kit, simply visit the link: https://github.com/Mahanaicoach/google-maps-scraper-kit Alternatively, comment 'MAPS' on the original post, and the author will DM you the repository link.

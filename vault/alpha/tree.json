@@ -1,41 +1,99 @@
 [
   {
-    "id": "dubai_dhow_cruise_offers_1783427519",
-    "title": "Dubai Dhow Cruise Offers",
+    "id": "instagram_post_analysis_1783433310",
+    "title": "Instagram Post Analysis",
     "url": "https://www.instagram.com/p/DZ5FEyUge-T/?igsh=Z2E1aHZzdnNseWZ1",
     "tags": [
-      "Dubai",
-      "Dhow Cruise",
-      "Travel Offers",
-      "Tourism",
-      "Middle East"
+      "Social Media",
+      "Content Creation",
+      "Influencer Marketing",
+      "Personal Branding"
     ],
     "categoryPath": [
-      "Travel",
-      "Dubai"
+      "Productivity",
+      "Motivation"
     ],
-    "snippet": "Dubai Dhow Cruise Offers and travel information",
-    "dateProcessed": "2026-07-07 16:32",
-    "filePath": "vault/alpha/Travel/Dubai/dubai_dhow_cruise_offers.md",
-    "thumbnailUrl": "/api/vault/alpha/thumbnails/dubai_dhow_cruise_offers.jpg"
+    "snippet": "Analyzing an Instagram post for productivity and motivation insights",
+    "dateProcessed": "2026-07-07 14:07",
+    "filePath": "vault/alpha/Productivity/Motivation/instagram_post_analysis.md",
+    "thumbnailUrl": ""
   },
   {
-    "id": "google_maps_scraper_kit_1783269542",
+    "id": "google_maps_scraper_kit_1783435389",
     "title": "Google Maps Scraper Kit",
     "url": "https://www.instagram.com/reel/DaNNCBxoyjk/?igsh=MW84Nm90M2xwMHNzdg==",
     "tags": [
-      "scraping",
-      "lead generation",
       "Google Maps",
-      "marketing tools"
+      "Lead Generation",
+      "Sales",
+      "Marketing"
     ],
     "categoryPath": [
       "Productivity",
       "Tools"
     ],
-    "snippet": "A complete guide to scraping business leads (emails, phone numbers, social profiles) using the Google Maps Scraper Kit.",
-    "dateProcessed": "2026-07-05 20:39",
+    "snippet": "Scrape Google Maps leads with business info",
+    "dateProcessed": "2026-07-07 14:41",
     "filePath": "vault/alpha/Productivity/Tools/google_maps_scraper_kit.md",
     "thumbnailUrl": "/api/vault/alpha/thumbnails/google_maps_scraper_kit.jpg"
+  },
+  {
+    "id": "youtube_features_and_capabilities_1783435296",
+    "title": "YouTube Features and Capabilities",
+    "url": "https://www.youtube.com/shorts/r2MjHhMzYGs",
+    "tags": [
+      "YouTube",
+      "Video Sharing",
+      "Content Creation",
+      "Social Media"
+    ],
+    "categoryPath": [
+      "Productivity",
+      "Tools"
+    ],
+    "snippet": "YouTube features and capabilities for content creation and sharing",
+    "dateProcessed": "2026-07-07 14:41",
+    "filePath": "vault/alpha/Productivity/Tools/youtube_features_and_capabilities.md",
+    "thumbnailUrl": "https://img.youtube.com/vi/r2MjHhMzYGs/hqdefault.jpg"
+  },
+  {
+    "id": "talent_and_opportunity_1783433253",
+    "title": "Talent and Opportunity",
+    "url": "https://www.instagram.com/reels/DadN6RGSoaE/",
+    "tags": [
+      "Talent",
+      "Opportunity",
+      "Success",
+      "Motivation",
+      "Inspiration"
+    ],
+    "categoryPath": [
+      "Productivity",
+      "Motivation"
+    ],
+    "snippet": "Talent is universal, but opportunity is not. Creating opportunities for hidden talent.",
+    "dateProcessed": "2026-07-07 14:06",
+    "filePath": "vault/alpha/Productivity/Motivation/talent_and_opportunity.md",
+    "thumbnailUrl": "/api/vault/alpha/thumbnails/talent_and_opportunity.jpg"
+  },
+  {
+    "id": "building_with_ai__a_streamlined_process_1783436004",
+    "title": "Building with AI: A Streamlined Process",
+    "url": "https://www.instagram.com/p/DWjy_UlDep-/",
+    "tags": [
+      "AI",
+      "Automation",
+      "Productivity",
+      "Free Tier Tools",
+      "Development"
+    ],
+    "categoryPath": [
+      "Productivity",
+      "Tools"
+    ],
+    "snippet": "Building with AI: 7 free tools for streamlined development",
+    "dateProcessed": "2026-07-07 14:52",
+    "filePath": "vault/alpha/Productivity/Tools/building_with_ai__a_streamlined_process.md",
+    "thumbnailUrl": "/api/vault/alpha/thumbnails/building_with_ai__a_streamlined_process.jpg"
   }
 ]
