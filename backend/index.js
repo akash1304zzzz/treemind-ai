@@ -320,10 +320,20 @@ app.post('/api/ingest', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
   console.log(`Triggering queue ingestion process for user: ${userId}...`);
   
-  const logs = [];
+  // Set headers for response streaming to keep connection alive and bypass Vercel timeouts
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
   const logCallback = (msg) => {
     console.log(msg);
-    logs.push(msg);
+    try {
+      res.write(msg + '\n');
+    } catch (e) {
+      console.error('Failed to write stream chunk:', e.message);
+    }
   };
 
   try {
@@ -331,28 +341,30 @@ app.post('/api/ingest', authMiddleware, async (req, res) => {
     
     if (result.success) {
       console.log('Ingestion finished successfully.');
-      res.json({
+      const metadata = {
         success: true,
-        stdout: logs.join('\n'),
-        stderr: '',
         remainingCount: result.remainingCount || 0
-      });
+      };
+      res.write('__METADATA__:' + JSON.stringify(metadata) + '\n');
     } else {
-      res.status(500).json({
+      const metadata = {
         success: false,
-        error: result.error,
-        stdout: logs.join('\n'),
-        stderr: result.error
-      });
+        error: result.error
+      };
+      res.write('__METADATA__:' + JSON.stringify(metadata) + '\n');
     }
   } catch (err) {
     console.error('Ingestion failed with exception:', err);
-    res.status(500).json({
+    res.write(`[Error] Ingestion failed: ${err.message}\n`);
+    const metadata = {
       success: false,
-      error: err.message,
-      stdout: logs.join('\n'),
-      stderr: err.stack
-    });
+      error: err.message
+    };
+    res.write('__METADATA__:' + JSON.stringify(metadata) + '\n');
+  } finally {
+    try {
+      res.end();
+    } catch (e) {}
   }
 });
 

@@ -268,23 +268,63 @@ export default function App() {
           throw new Error(errMsg || `HTTP ${res.status}`);
         }
         
-        const data = await res.json();
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
         
-        if (data.success) {
-          setConsoleLogs(prev => prev + `[Success] Batch finished.\n${data.stdout}\n`);
+        let done = false;
+        let buffer = '';
+        let metadata = null;
+        
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          
+          if (value) {
+            const textChunk = decoder.decode(value, { stream: !done });
+            buffer += textChunk;
+            
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep last incomplete line in buffer
+            
+            for (const line of lines) {
+              if (line.startsWith('__METADATA__:')) {
+                try {
+                  metadata = JSON.parse(line.substring(13));
+                } catch (e) {
+                  console.error('Failed to parse metadata:', e);
+                }
+              } else {
+                setConsoleLogs(prev => prev + line + '\n');
+              }
+            }
+          }
+        }
+        
+        if (buffer) {
+          if (buffer.startsWith('__METADATA__:')) {
+            try {
+              metadata = JSON.parse(buffer.substring(13));
+            } catch (e) {}
+          } else {
+            setConsoleLogs(prev => prev + buffer + '\n');
+          }
+        }
+        
+        if (metadata && metadata.success) {
+          setConsoleLogs(prev => prev + `[Success] Batch finished.\n`);
           fetchData();
           
-          if (data.remainingCount && data.remainingCount > 0) {
+          if (metadata.remainingCount && metadata.remainingCount > 0) {
             hasMore = true;
             loopCount++;
-            // Delay 1.5 seconds between requests to prevent rate-limiting/overload
             await new Promise(resolve => setTimeout(resolve, 1500));
           } else {
             hasMore = false;
             setConsoleLogs(prev => prev + `[Success] All items in queue have been processed!\n`);
           }
         } else {
-          setConsoleLogs(prev => prev + `[Error] Ingestion failed:\n${data.error}\n${data.stderr}\n`);
+          const err = metadata ? metadata.error : 'Unknown ingestion error';
+          setConsoleLogs(prev => prev + `[Error] Ingestion failed: ${err}\n`);
           hasMore = false;
         }
       }
