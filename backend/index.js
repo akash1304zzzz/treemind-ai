@@ -336,6 +336,15 @@ app.post('/api/ingest', authMiddleware, async (req, res) => {
     }
   };
 
+  // Set up keep-alive heartbeat interval to keep connection open during slow operations (LLM, Scrapers)
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(' \n'); // Send a space and newline as a heartbeat chunk
+    } catch (e) {
+      console.error('Failed to write heartbeat chunk:', e.message);
+    }
+  }, 4000);
+
   try {
     const result = await ingestQueue(userId, getUserPaths, logCallback);
     
@@ -362,6 +371,7 @@ app.post('/api/ingest', authMiddleware, async (req, res) => {
     };
     res.write('__METADATA__:' + JSON.stringify(metadata) + '\n');
   } finally {
+    clearInterval(heartbeat);
     try {
       res.end();
     } catch (e) {}

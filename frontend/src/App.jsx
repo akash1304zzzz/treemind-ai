@@ -294,7 +294,9 @@ export default function App() {
                   console.error('Failed to parse metadata:', e);
                 }
               } else {
-                setConsoleLogs(prev => prev + line + '\n');
+                if (line.trim()) {
+                  setConsoleLogs(prev => prev + line + '\n');
+                }
               }
             }
           }
@@ -306,7 +308,9 @@ export default function App() {
               metadata = JSON.parse(buffer.substring(13));
             } catch (e) {}
           } else {
-            setConsoleLogs(prev => prev + buffer + '\n');
+            if (buffer.trim()) {
+              setConsoleLogs(prev => prev + buffer + '\n');
+            }
           }
         }
         
