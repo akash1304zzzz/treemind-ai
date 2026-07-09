@@ -18,14 +18,30 @@ function decodeHtmlEntities(str) {
     .replace(/&amp;/g, '&');
 }
 
+// Helper to repair missing trailing double quotes or curly braces in LLM JSON output
+function repairJson(str) {
+  let trimmed = str.trim();
+  if (!trimmed.endsWith('}')) {
+    const quoteCount = (trimmed.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0) {
+      trimmed += '"';
+    }
+    if (!trimmed.endsWith('}')) {
+      trimmed += '\n}';
+    }
+  }
+  return trimmed;
+}
+
 // Robust JSON parser to handle raw newlines inside string literals from LLM outputs
 function parseRobustJson(str) {
+  const repaired = repairJson(str);
   try {
-    return JSON.parse(str);
+    return JSON.parse(repaired);
   } catch (e) {
     try {
       // Escape raw newlines inside double quotes
-      let sanitized = str.replace(/"([^"\\]|\\.)*"/g, (match) => {
+      let sanitized = repaired.replace(/"([^"\\]|\\.)*"/g, (match) => {
         return match.replace(/\r?\n/g, '\\n');
       });
       return JSON.parse(sanitized);
