@@ -328,8 +328,13 @@ async function ingestQueue(userId, getUserPaths, logger) {
       // First try fallback scraper for YouTube
       scrapedMeta = await getYouTubeMetadataFallback(url, logger);
       
-      // If fallback failed or description is empty and we have Apify token, try Apify YouTube Scraper
-      if ((!scrapedMeta || !scrapedMeta.description) && apifyToken) {
+      // In cloud mode, skip the slow Apify YouTube Scraper if the fallback scraper successfully retrieved a title.
+      // This keeps execution fast and prevents Vercel serverless function timeouts.
+      const needsApifyFallback = isSupabase 
+        ? (!scrapedMeta || !scrapedMeta.title)
+        : (!scrapedMeta || !scrapedMeta.description);
+
+      if (needsApifyFallback && apifyToken) {
         logger(`[Ingest] Falling back to Apify YouTube Scraper for deeper analysis...`);
         const dataset = await runApifyActorSync('apify/youtube-scraper', {
           startUrls: [{ url }],
