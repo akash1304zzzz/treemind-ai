@@ -18,6 +18,23 @@ function decodeHtmlEntities(str) {
     .replace(/&amp;/g, '&');
 }
 
+// Robust JSON parser to handle raw newlines inside string literals from LLM outputs
+function parseRobustJson(str) {
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    try {
+      // Escape raw newlines inside double quotes
+      let sanitized = str.replace(/"([^"\\]|\\.)*"/g, (match) => {
+        return match.replace(/\r?\n/g, '\\n');
+      });
+      return JSON.parse(sanitized);
+    } catch (e2) {
+      throw new Error(`JSON parse failed: ${e.message} (Sanitization retry failed: ${e2.message})`);
+    }
+  }
+}
+
 // Robust fetch with retry helper
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 2000, logger) {
   for (let i = 0; i < retries; i++) {
@@ -52,8 +69,13 @@ async function getYouTubeMetadataFallback(url, logger) {
     const videoIdMatch = url.match(/(?:v=|\/shorts\/|\/embed\/|\/v\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     const videoId = videoIdMatch ? videoIdMatch[1] : '';
     
+    let parsedTitle = titleMatch ? decodeHtmlEntities(titleMatch[1]).trim() : 'YouTube Video';
+    if (!parsedTitle || parsedTitle.toLowerCase() === 'youtube' || parsedTitle === ' - YouTube' || parsedTitle.toLowerCase() === 'youtube video') {
+      parsedTitle = `YouTube Video ${videoId ? `(${videoId})` : ''}`;
+    }
+
     const meta = {
-      title: titleMatch ? decodeHtmlEntities(titleMatch[1]) : 'YouTube Video',
+      title: parsedTitle,
       description: descMatch ? decodeHtmlEntities(descMatch[1]) : '',
       displayUrl: thumbMatch ? thumbMatch[1] : (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : ''),
       ownerUsername: 'YouTube Creator'
@@ -417,13 +439,16 @@ Return the response strictly inside the JSON schema.`;
               }
             ],
             temperature: 0.2,
-            max_tokens: 2048,
-            response_format: { type: 'json_object' }
+            max_tokens: 2048
           })
         }, 3, 2000, logger);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        responseJson = JSON.parse(data.choices[0].message.content);
+        
+        const rawContent = data.choices[0].message.content.trim();
+        const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)\s*```/) || rawContent.match(/```\s*([\s\S]*?)\s*```/);
+        const jsonString = jsonMatch ? jsonMatch[1].trim() : rawContent;
+        responseJson = parseRobustJson(jsonString);
       } else if (geminiKey) {
         logger(`[LLM] Calling Gemini API (gemini-2.5-flash)...`);
         const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
