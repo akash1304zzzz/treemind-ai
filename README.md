@@ -2,6 +2,8 @@
 
 An automated multi-modal extraction pipeline designed to pull structured data from cooking videos and trading charts, which will serve as the core extraction engine for TreeMind AI.
 
+<!-- redeploy -->
+
 ## Project Structure
 
 ```text
