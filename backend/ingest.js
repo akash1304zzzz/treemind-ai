@@ -474,29 +474,40 @@ Return the response strictly inside the JSON schema.`;
     if (scrapedMeta.displayUrl) {
       const buffer = await downloadImageToBuffer(scrapedMeta.displayUrl, logger);
       if (buffer) {
-        // Save locally
-        const thumbnailDir = path.join(vaultDir, 'thumbnails');
-        fs.mkdirSync(thumbnailDir, { recursive: true });
-        const thumbLocalPath = path.join(thumbnailDir, `${sanitizedTitle}.jpg`);
-        fs.writeFileSync(thumbLocalPath, buffer);
-        localThumbnailUrl = `/api/vault/${userId}/thumbnails/${sanitizedTitle}.jpg`;
-        
-        // Upload to Supabase storage if available
         if (isSupabase) {
+          // Cloud mode: Upload directly to Supabase Storage (no local write)
           logger(`[Supabase] Uploading thumbnail to Supabase storage bucket...`);
           try {
-            await supabase.storage
+            const thumbFilename = `${sanitizedTitle}.jpg`;
+            const { error: uploadError } = await supabase.storage
               .from('thumbnails')
-              .upload(`${sanitizedTitle}.jpg`, buffer, {
+              .upload(thumbFilename, buffer, {
                 contentType: 'image/jpeg',
                 upsert: true
               });
+            if (uploadError) throw uploadError;
+            localThumbnailUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/thumbnails/${thumbFilename}`;
+            logger(`[Supabase] Thumbnail uploaded: ${localThumbnailUrl}`);
           } catch (se) {
-            logger(`[Warning] Supabase storage upload failed: ${se.message}`);
+            logger(`[Warning] Supabase storage upload failed: ${se.message}. Using original URL as fallback.`);
+            localThumbnailUrl = scrapedMeta.displayUrl || '';
+          }
+        } else {
+          // Local mode: Save to local vault directory
+          try {
+            const thumbnailDir = path.join(vaultDir, 'thumbnails');
+            fs.mkdirSync(thumbnailDir, { recursive: true });
+            const thumbLocalPath = path.join(thumbnailDir, `${sanitizedTitle}.jpg`);
+            fs.writeFileSync(thumbLocalPath, buffer);
+            localThumbnailUrl = `/api/vault/${userId}/thumbnails/${sanitizedTitle}.jpg`;
+          } catch (localErr) {
+            logger(`[Warning] Failed to save thumbnail locally: ${localErr.message}`);
+            localThumbnailUrl = scrapedMeta.displayUrl || '';
           }
         }
       }
     }
+
 
     // Save note record
     if (isSupabase) {
