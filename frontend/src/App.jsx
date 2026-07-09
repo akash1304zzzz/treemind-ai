@@ -244,22 +244,49 @@ export default function App() {
     setIsIngesting(true);
     setShowConsole(true);
     setConsoleLogs(prev => prev + `[Ingest] Launching pipeline ingestion...\n`);
+    
+    let hasMore = true;
+    let loopCount = 0;
+    
     try {
-      const res = await fetch(`${API_URL}/api/ingest`, {
-        method: 'POST',
-        headers: { 
-          'x-app-password': password,
-          'x-user-id': userId,
-          'Bypass-Tunnel-Reminder': 'true'
+      while (hasMore) {
+        if (loopCount > 0) {
+          setConsoleLogs(prev => prev + `[Ingest] Processing next item in queue...\n`);
         }
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        setConsoleLogs(prev => prev + `[Success] Ingestion finished successfully.\n${data.stdout}\n`);
-        fetchData();
-      } else {
-        setConsoleLogs(prev => prev + `[Error] Ingestion failed:\n${data.error}\n${data.stderr}\n`);
+        
+        const res = await fetch(`${API_URL}/api/ingest`, {
+          method: 'POST',
+          headers: { 
+            'x-app-password': password,
+            'x-user-id': userId,
+            'Bypass-Tunnel-Reminder': 'true'
+          }
+        });
+        
+        if (!res.ok) {
+          const errMsg = await res.text();
+          throw new Error(errMsg || `HTTP ${res.status}`);
+        }
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          setConsoleLogs(prev => prev + `[Success] Batch finished.\n${data.stdout}\n`);
+          fetchData();
+          
+          if (data.remainingCount && data.remainingCount > 0) {
+            hasMore = true;
+            loopCount++;
+            // Delay 1.5 seconds between requests to prevent rate-limiting/overload
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } else {
+            hasMore = false;
+            setConsoleLogs(prev => prev + `[Success] All items in queue have been processed!\n`);
+          }
+        } else {
+          setConsoleLogs(prev => prev + `[Error] Ingestion failed:\n${data.error}\n${data.stderr}\n`);
+          hasMore = false;
+        }
       }
     } catch (e) {
       setConsoleLogs(prev => prev + `[Error] Connection error: ${e.message}\n`);

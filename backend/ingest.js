@@ -253,6 +253,7 @@ async function ingestQueue(userId, getUserPaths, logger) {
 
   let processedCount = 0;
   const processedUrls = new Map(); // Cache processed URLs in current session to skip duplicate runs
+  let distinctUrlsProcessed = 0;
 
   for (const item of itemsToProcess) {
     const { url, depth } = item;
@@ -266,6 +267,12 @@ async function ingestQueue(userId, getUserPaths, logger) {
       continue;
     }
 
+    // Limit to processing at most 1 distinct new URL per run on Vercel (cloud mode) to prevent 60s timeout
+    if (isSupabase && distinctUrlsProcessed >= 1) {
+      logger(`[Ingest] Bypassing ${url} in this run to prevent execution timeout. It will be processed in the next run.`);
+      continue;
+    }
+
     // Politeness delay
     if (processedCount > 0) {
       logger(`[Ingest] Waiting 2 seconds before the next item to prevent rate-limiting...`);
@@ -273,6 +280,7 @@ async function ingestQueue(userId, getUserPaths, logger) {
     }
 
     logger(`[Ingest] Processing URL: ${url} (Depth: ${depth})`);
+    distinctUrlsProcessed++;
 
     let scrapedMeta = null;
 
@@ -594,8 +602,36 @@ Return the response strictly inside the JSON schema.`;
     logger(`[Success] Processed item ${processedCount}/${itemsToProcess.length}`);
   }
 
-  logger(`[Ingest] Ingestion completed. Processed ${processedCount} item(s).`);
-  return { success: true, processedCount };
+  // Calculate remaining count of pending items
+  let remainingCount = 0;
+  if (isSupabase) {
+    try {
+      const { count, error } = await supabase
+        .from('queue')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'pending');
+      if (!error) {
+        remainingCount = count || 0;
+      }
+    } catch (e) {
+      logger(`[Warning] Failed to fetch remaining queue count: ${e.message}`);
+    }
+  } else {
+    if (fs.existsSync(queuePath)) {
+      try {
+        const content = fs.readFileSync(queuePath, 'utf8');
+        const lines = content.split('\n');
+        const pattern = /^\s*-\s*\[\s*\]\s*(https:\/\/[^\s()]+)/;
+        lines.forEach(line => {
+          if (line.match(pattern)) remainingCount++;
+        });
+      } catch (e) {}
+    }
+  }
+
+  logger(`[Ingest] Ingestion completed. Processed ${processedCount} item(s). Remaining pending items: ${remainingCount}`);
+  return { success: true, processedCount, remainingCount };
 }
 
 module.exports = {

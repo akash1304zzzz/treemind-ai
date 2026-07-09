@@ -334,7 +334,8 @@ app.post('/api/ingest', authMiddleware, async (req, res) => {
       res.json({
         success: true,
         stdout: logs.join('\n'),
-        stderr: ''
+        stderr: '',
+        remainingCount: result.remainingCount || 0
       });
     } else {
       res.status(500).json({
