@@ -23,14 +23,18 @@ function getUserPaths(userId) {
   const queuePath = path.join(vaultDir, 'queue.md');
   const treePath = path.join(vaultDir, 'tree.json');
   
-  if (!fs.existsSync(vaultDir)) {
-    fs.mkdirSync(vaultDir, { recursive: true });
-  }
-  if (!fs.existsSync(treePath)) {
-    fs.writeFileSync(treePath, '[]', 'utf8');
-  }
-  if (!fs.existsSync(queuePath)) {
-    fs.writeFileSync(queuePath, '# Remind AI Ingestion Queue\n\n', 'utf8');
+  try {
+    if (!fs.existsSync(vaultDir)) {
+      fs.mkdirSync(vaultDir, { recursive: true });
+    }
+    if (!fs.existsSync(treePath)) {
+      fs.writeFileSync(treePath, '[]', 'utf8');
+    }
+    if (!fs.existsSync(queuePath)) {
+      fs.writeFileSync(queuePath, '# Remind AI Ingestion Queue\n\n', 'utf8');
+    }
+  } catch (err) {
+    console.warn(`[Local Filesystem Initialization Warning] Could not initialize local directory for ${safeUserId}:`, err.message);
   }
   
   return { vaultDir, queuePath, treePath, userId: safeUserId };
@@ -129,14 +133,21 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
   const depthVal = depth || 'Detailed Notes';
 
-  // Always write to local queue.md — Python ingest script reads from here
-  const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})\n`;
-  fs.appendFileSync(queuePath, newLine, 'utf8');
+  // Try to write to local queue.md — Python ingest script reads from here
+  let localWriteSuccess = false;
+  try {
+    const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})\n`;
+    fs.appendFileSync(queuePath, newLine, 'utf8');
+    localWriteSuccess = true;
+  } catch (err) {
+    console.warn('[Local Queue Write Warning]: Could not write queue.md locally:', err.message);
+  }
 
   // Also write to Supabase if available (for cloud/Vercel deployments)
+  let supabaseWriteSuccess = false;
   if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
     try {
-      await supabase
+      const { error } = await supabase
         .from('queue')
         .insert({
           user_id: userId,
@@ -144,10 +155,15 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
           depth: depthVal,
           status: 'pending'
         });
+      if (error) throw error;
+      supabaseWriteSuccess = true;
     } catch (err) {
-      console.error('[Supabase Queue Insert Warning]:', err.message);
-      // Non-fatal: local queue.md write already succeeded
+      console.error('[Supabase Queue Insert Error]:', err.message);
     }
+  }
+
+  if (!localWriteSuccess && !supabaseWriteSuccess) {
+    return res.status(500).json({ error: 'Failed to write URL to queue in both local file and Supabase.' });
   }
 
   res.json({ success: true, message: 'URL added to queue successfully.' });
