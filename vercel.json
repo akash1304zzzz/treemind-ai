@@ -4,6 +4,11 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "cd backend && npm install",
   "framework": null,
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/api/(.*)",
