@@ -943,3 +943,178 @@ body {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   TECH TREE VIEW / MIND MAP STYLES (MODULE B)
+   ========================================================================== */
+.tech-tree-container {
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.control-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(8px);
+}
+
+.control-btn:hover {
+  background: #7c3aed;
+  color: #fff;
+  border-color: #a855f7;
+  transform: scale(1.05);
+}
+
+.tree-node-root {
+  background: rgba(26, 21, 44, 0.85);
+  border: 1.5px solid #a855f7;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tree-node-category {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(12px);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tree-node-category:hover {
+  border-color: #a855f7;
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.15);
+}
+
+.tree-node-category.collapsed {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.tree-node-subcategory {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(12px);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tree-node-subcategory:hover {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.08);
+  color: #fff;
+}
+
+.tree-node-subcategory.collapsed {
+  border-color: rgba(139, 92, 246, 0.35);
+  background: rgba(139, 92, 246, 0.03);
+}
+
+.tree-node-note {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(12px);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.tree-node-note:hover {
+  border-color: #8b5cf6;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.node-note-title {
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.node-note-snippet {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-top: 4px;
+}
+
+/* View toggle buttons styling */
+.view-toggle-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.view-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.view-toggle-btn.active {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #c084fc;
+}
+

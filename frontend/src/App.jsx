@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
+import TechTreeGraph from './TechTreeGraph';
 import { 
   Folder, 
   FolderOpen, 
@@ -21,7 +22,9 @@ import {
   Edit2,
   Home,
   User,
-  Camera
+  Camera,
+  Grid,
+  Network
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
@@ -43,6 +46,7 @@ export default function App() {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null); // { root: string, sub: string | null }
+  const [dashboardView, setDashboardView] = useState('grid'); // 'grid' or 'tree'
   const [expandedCategories, setExpandedCategories] = useState({}); // { [root]: boolean }
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -1059,6 +1063,27 @@ export default function App() {
             )}
 
             {mobileTab === 'home' && (
+              <div className="view-toggle-container" style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+                <button 
+                  className={`view-toggle-btn ${dashboardView === 'grid' ? 'active' : ''}`}
+                  onClick={() => setDashboardView('grid')}
+                  style={{ padding: '6px 12px', border: 'none', display: 'flex', gap: '6px', alignItems: 'center' }}
+                >
+                  <Grid size={14} />
+                  <span>Grid</span>
+                </button>
+                <button 
+                  className={`view-toggle-btn ${dashboardView === 'tree' ? 'active' : ''}`}
+                  onClick={() => setDashboardView('tree')}
+                  style={{ padding: '6px 12px', border: 'none', display: 'flex', gap: '6px', alignItems: 'center' }}
+                >
+                  <Network size={14} />
+                  <span>Tech Tree</span>
+                </button>
+              </div>
+            )}
+
+            {mobileTab === 'home' && (
               <button 
                 className="action-btn"
                 style={{
@@ -1157,7 +1182,9 @@ export default function App() {
         {/* Dashboard Grid / Recent List Toggle */}
         {mobileTab === 'home' && (
           <section className="content-area">
-            {(searchQuery.trim().length > 0 || showAllNotes) ? (
+            {dashboardView === 'tree' ? (
+              <TechTreeGraph notes={filteredNotes} onSelectNote={loadNoteContent} />
+            ) : (searchQuery.trim().length > 0 || showAllNotes) ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 700 }}>
