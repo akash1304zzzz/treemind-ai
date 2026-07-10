@@ -50,6 +50,33 @@ export default function App() {
   const [expandedCategories, setExpandedCategories] = useState({}); // { [root]: boolean }
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Profile & Limits State
+  const [profileName, setProfileName] = useState(() => localStorage.getItem('tm_profile_name') || '');
+  const [profileEmail, setProfileEmail] = useState(() => localStorage.getItem('tm_profile_email') || '');
+  const [profilePlatforms, setProfilePlatforms] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tm_profile_platforms');
+      return saved ? JSON.parse(saved) : { youtube: true, instagram: true, tiktok: true };
+    } catch {
+      return { youtube: true, instagram: true, tiktok: true };
+    }
+  });
+  const [profileSavedFlash, setProfileSavedFlash] = useState(false);
+
+  const monthlyIngestCount = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    return notes.filter(note => {
+      if (!note.dateProcessed) return false;
+      const datePart = note.dateProcessed.split(' ')[0];
+      const parts = datePart.split('-');
+      if (parts.length < 2) return false;
+      return parseInt(parts[0], 10) === currentYear && parseInt(parts[1], 10) === currentMonth;
+    }).length;
+  }, [notes]);
+  
   // URL Input State
   const [newUrl, setNewUrl] = useState('');
   const [depth, setDepth] = useState('Detailed Notes');
@@ -224,6 +251,11 @@ export default function App() {
   const handleAddToQueue = async (e) => {
     e.preventDefault();
     if (!newUrl) return;
+
+    if (monthlyIngestCount >= 20) {
+      alert('Usage Limit Reached: Free Tier accounts are limited to 20 video summaries per month. Please go to the My Profile tab and upgrade to Premium for unlimited summaries!');
+      return;
+    }
 
     try {
       const res = await fetch(`${API_URL}/api/queue`, {
@@ -854,11 +886,19 @@ export default function App() {
 
         <div className="nav-buttons-container">
           <button 
-            className={`cat-btn ${!activeCategory ? 'active' : ''}`}
+            className={`cat-btn ${!activeCategory && mobileTab === 'home' ? 'active' : ''}`}
             onClick={() => { setActiveCategory(null); setMobileTab('home'); }}
           >
             <span>All Notes</span>
             <FileText size={16} />
+          </button>
+
+          <button 
+            className={`cat-btn ${mobileTab === 'profile' ? 'active' : ''}`}
+            onClick={() => { setActiveCategory(null); setMobileTab('profile'); }}
+          >
+            <span>My Profile</span>
+            <User size={16} />
           </button>
 
           <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '8px 0' }} />
@@ -1416,58 +1456,205 @@ export default function App() {
 
         {/* Mobile Profile View */}
         {mobileTab === 'profile' && (
-          <section className="content-area" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Profile & Vault Settings</h3>
-            
-            {/* Active Vault Badge Card */}
-            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', textAlign: 'center' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)', fontSize: 20 }}>
-                🔑
+          <section className="content-area" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+            <h3 style={{ fontSize: 18, fontFamily: 'Outfit', fontWeight: 700 }}>My Account & Profile</h3>
+
+            {/* Ingestion Limit progress card */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ fontSize: 16, fontWeight: 600 }}>Active Plan: <span style={{ color: 'var(--accent-primary)' }}>Free Tier</span></h4>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>
+                    Each user is limited to 20 video summaries per month.
+                  </p>
+                </div>
+                <span className="tag-badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.3)', fontSize: 11, padding: '4px 12px' }}>
+                  Free Account
+                </span>
               </div>
-              <div>
-                <h4 style={{ fontSize: 16, fontWeight: 600 }}>Active Vault Path</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-                  You are currently editing vault: <strong>{userId}</strong>
-                </p>
+
+              {/* Progress Bar */}
+              <div style={{ marginTop: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: '6px', fontWeight: 500 }}>
+                  <span>Ingested this Month</span>
+                  <span style={{ color: monthlyIngestCount >= 20 ? '#ef4444' : 'var(--text-primary)' }}>
+                    {monthlyIngestCount} / 20 videos
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div 
+                    style={{ 
+                      width: `${Math.min(100, (monthlyIngestCount / 20) * 100)}%`, 
+                      height: '100%', 
+                      background: monthlyIngestCount >= 20 ? '#ef4444' : 'linear-gradient(90deg, #8b5cf6, #c084fc)',
+                      borderRadius: '4px',
+                      transition: 'width 0.3s ease'
+                    }}
+                  />
+                </div>
+                {monthlyIngestCount >= 20 && (
+                  <p style={{ color: '#ef4444', fontSize: 12, marginTop: '8px', fontWeight: 500 }}>
+                    ⚠️ You have reached your monthly ingestion limit. Please upgrade to request unlimited summaries!
+                  </p>
+                )}
               </div>
-              <span className="tag-badge" style={{ background: '#10b981', color: '#fff', fontSize: 11, padding: '4px 10px', border: 'none' }}>
-                Connected Securely
-              </span>
             </div>
 
-            {/* Config Keys Option */}
-            <button 
-              className="action-btn"
-              style={{
-                width: '100%',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-primary)',
-                justifyContent: 'center',
-                padding: '16px'
-              }}
-              onClick={() => setShowSettings(true)}
-            >
-              <Settings size={18} style={{ marginRight: 8 }} />
-              Configure Credentials & Keys
-            </button>
+            {/* Profile Info Form Card */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h4 style={{ fontSize: 15, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+                User Description & Settings
+              </h4>
+              
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  localStorage.setItem('tm_profile_name', profileName);
+                  localStorage.setItem('tm_profile_email', profileEmail);
+                  localStorage.setItem('tm_profile_platforms', JSON.stringify(profilePlatforms));
+                  setProfileSavedFlash(true);
+                  setTimeout(() => setProfileSavedFlash(false), 2500);
+                }} 
+                style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Full Name</label>
+                  <input 
+                    type="text" 
+                    className="url-input" 
+                    placeholder="Enter your name" 
+                    value={profileName} 
+                    onChange={(e) => setProfileName(e.target.value)} 
+                    style={{ width: '100%', padding: '10px 12px' }}
+                    required
+                  />
+                </div>
 
-            {/* Logout/Lock Option */}
-            <button 
-              className="action-btn"
-              style={{
-                width: '100%',
-                background: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                color: '#ef4444',
-                justifyContent: 'center',
-                padding: '16px'
-              }}
-              onClick={handleLogout}
-            >
-              <Lock size={18} style={{ marginRight: 8 }} />
-              Lock Vault (Logout)
-            </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Email Address</label>
+                  <input 
+                    type="email" 
+                    className="url-input" 
+                    placeholder="Enter your email" 
+                    value={profileEmail} 
+                    onChange={(e) => setProfileEmail(e.target.value)} 
+                    style={{ width: '100%', padding: '10px 12px' }}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Social Platforms Used</label>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 13 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!profilePlatforms.youtube} 
+                        onChange={(e) => setProfilePlatforms(prev => ({ ...prev, youtube: e.target.checked }))}
+                        style={{ accentColor: '#8b5cf6', width: '16px', height: '16px' }}
+                      />
+                      <span>YouTube</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 13 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!profilePlatforms.instagram} 
+                        onChange={(e) => setProfilePlatforms(prev => ({ ...prev, instagram: e.target.checked }))}
+                        style={{ accentColor: '#8b5cf6', width: '16px', height: '16px' }}
+                      />
+                      <span>Instagram</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 13 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!profilePlatforms.tiktok} 
+                        onChange={(e) => setProfilePlatforms(prev => ({ ...prev, tiktok: e.target.checked }))}
+                        style={{ accentColor: '#8b5cf6', width: '16px', height: '16px' }}
+                      />
+                      <span>TikTok</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '4px' }}>
+                  <button type="submit" className="action-btn" style={{ padding: '12px 24px' }}>
+                    Save Profile
+                  </button>
+                  {profileSavedFlash && (
+                    <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600, animation: 'pulse 1.5s infinite' }}>
+                      ✓ Profile settings saved successfully!
+                    </span>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Premium Upgrade CTA Card */}
+            <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', background: 'radial-gradient(ellipse at top right, rgba(139, 92, 246, 0.1), transparent)' }}>
+              <div>
+                <h4 style={{ fontSize: 15, fontWeight: 700, color: '#c084fc' }}>🚀 Need Unlimited Summaries?</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+                  Upgrade to **TreeMind Premium** to remove the monthly 20-video limit, enable Fine-Grained Study depth for longer videos, and gain faster GPU transcription access.
+                </p>
+              </div>
+
+              <button 
+                type="button" 
+                className="action-btn"
+                style={{
+                  background: 'linear-gradient(90deg, #8b5cf6, #c084fc)',
+                  border: 'none',
+                  color: '#fff',
+                  justifyContent: 'center',
+                  padding: '14px',
+                  fontWeight: 600
+                }}
+                onClick={() => {
+                  const activePlatforms = Object.keys(profilePlatforms)
+                    .filter(k => profilePlatforms[k])
+                    .join(', ');
+                  const mailtoUrl = `mailto:upgrade@treemind.ai?subject=Premium Upgrade Request - ${userId}&body=Hi TreeMind AI Team,%0A%0AI would like to upgrade my account (${userId}) to the Premium Tier for unlimited video ingestions.%0A%0AMy Details:%0A- Name: ${profileName || '(Not set)'}%0A- Email: ${profileEmail || '(Not set)'}%0A- Platforms: ${activePlatforms || '(None selected)'}%0A%0APlease contact me with upgrade instructions!`;
+                  window.open(mailtoUrl, '_blank');
+                }}
+              >
+                Send Upgrade Email Request
+              </button>
+            </div>
+
+            {/* System Actions Area */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="action-btn"
+                style={{
+                  flex: 1,
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  justifyContent: 'center',
+                  padding: '12px'
+                }}
+                onClick={() => setShowSettings(true)}
+              >
+                <Settings size={16} style={{ marginRight: 8 }} />
+                Server Settings
+              </button>
+
+              <button 
+                className="action-btn"
+                style={{
+                  flex: 1,
+                  background: 'rgba(239, 68, 68, 0.05)',
+                  border: '1px solid rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  justifyContent: 'center',
+                  padding: '12px'
+                }}
+                onClick={handleLogout}
+              >
+                <Lock size={16} style={{ marginRight: 8 }} />
+                Lock Vault
+              </button>
+            </div>
           </section>
         )}
 

@@ -137,6 +137,57 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   }
   
   const userId = req.headers['x-user-id'] || 'default';
+
+  // Enforcement check: Free tier limit of 20 videos per month
+  let currentMonthCount = 0;
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { count, error } = await supabase
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('date_processed', startOfMonth.toISOString());
+      
+      if (!error && count !== null) {
+        currentMonthCount = count;
+      }
+    } catch (err) {
+      console.error('[Limit Check Error]: Failed to count Supabase notes:', err.message);
+    }
+  } else {
+    // Local JSON fallback
+    try {
+      const { getUserPaths } = require('./index'); // self reference or access local paths
+      const paths = getUserPaths(userId);
+      if (fs.existsSync(paths.treePath)) {
+        const data = JSON.parse(fs.readFileSync(paths.treePath, 'utf8'));
+        if (Array.isArray(data)) {
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth() + 1;
+          
+          currentMonthCount = data.filter(note => {
+            if (!note.dateProcessed) return false;
+            const datePart = note.dateProcessed.split(' ')[0];
+            const parts = datePart.split('-');
+            if (parts.length < 2) return false;
+            return parseInt(parts[0], 10) === currentYear && parseInt(parts[1], 10) === currentMonth;
+          }).length;
+        }
+      }
+    } catch (err) {
+      console.warn('[Limit Check Error]: Failed to count local JSON notes:', err.message);
+    }
+  }
+
+  if (currentMonthCount >= 20) {
+    return res.status(403).json({ error: 'Monthly limit of 20 video summaries reached on Free Tier. Please upgrade to Premium.' });
+  }
+
   const { queuePath } = getUserPaths(userId);
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
   const depthVal = depth || 'Detailed Notes';
