@@ -15,8 +15,10 @@
     "@capacitor/core": "^8.4.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@sentry/react": "^10.65.0",
     "fuse.js": "^7.4.2",
     "lucide-react": "^1.23.0",
+    "posthog-js": "^1.399.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

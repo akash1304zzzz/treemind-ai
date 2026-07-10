@@ -1,3 +1,11 @@
+const Sentry = require("@sentry/node");
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 1.0,
+  });
+}
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -742,6 +750,10 @@ app.post('/api/note/delete', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete note: ' + error.message });
   }
 });
+
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // Serve frontend assets in production with disabled cache headers
 app.use(express.static(path.join(__dirname, '../frontend/dist'), {

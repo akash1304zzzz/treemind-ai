@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
 import { 
   Folder, 
@@ -117,6 +118,8 @@ export default function App() {
         setUserId(usrId);
         localStorage.setItem('tm_password', pass);
         localStorage.setItem('tm_user_id', usrId);
+        posthog.identify(usrId);
+        posthog.capture('user_login', { userId: usrId });
         fetchData(pass, usrId);
       } else {
         setLoginError('Invalid application password.');
@@ -175,6 +178,11 @@ export default function App() {
     setLoadingNote(true);
     setSelectedNote(note);
     setNoteContent('');
+    posthog.capture('note_viewed', { 
+      noteId: note.id, 
+      title: note.title, 
+      categoryPath: note.categoryPath 
+    });
     
     // Initialize metadata editor states
     setIsEditingMeta(false);
@@ -228,6 +236,7 @@ export default function App() {
       if (res.ok) {
         setUrlQueued(true);
         setShowConsole(true);
+        posthog.capture('video_queued', { url: newUrl, depth });
         setConsoleLogs(prev => prev + `[System] Queued URL: ${newUrl} with depth: ${depth}\n`);
         // Flash success for 2 seconds then clear input but keep form open
         setTimeout(() => { setUrlQueued(false); setNewUrl(''); fetchData(); }, 2000);
@@ -243,6 +252,7 @@ export default function App() {
   const triggerIngestion = async () => {
     setIsIngesting(true);
     setShowConsole(true);
+    posthog.capture('queue_ingestion_started');
     setConsoleLogs(prev => prev + `[Ingest] Launching pipeline ingestion...\n`);
     
     let hasMore = true;
