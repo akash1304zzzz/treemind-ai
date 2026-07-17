@@ -195,7 +195,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'x-user-id': usrId
         },
-        body: JSON.stringify({ password: pass })
+        body: JSON.stringify({ password: pass, user_id: usrId })
       });
       if (res.ok) {
         setIsAuthenticated(true);
