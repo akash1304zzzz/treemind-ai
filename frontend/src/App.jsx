@@ -914,6 +914,34 @@ export default function App() {
     );
   }
 
+  // ── Admin Login Page (standalone) ──
+  if (viewMode === 'admin-login') {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ background: 'var(--bg-elevated)', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)', textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+            <Shield size={24} color="#38bdf8" />
+          </div>
+          <h2 style={{ fontFamily: 'Outfit', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin Access</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24 }}>Enter the admin password to continue</p>
+          <AdminLoginForm
+            apiUrl={API_URL}
+            onSuccess={(pwd) => { setAdminPassword(pwd); setViewMode('admin'); }}
+            onBack={() => setViewMode('login')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Admin Dashboard Page (standalone) ──
+  if (viewMode === 'admin') {
+    return (
+      <AdminView adminPassword={adminPassword} apiUrl={API_URL}
+        onLogout={() => { setAdminPassword(''); setViewMode('login'); }} />
+    );
+  }
+
   // Password Lock Screen
   if (!isAuthenticated) {
     return (
@@ -1030,34 +1058,6 @@ export default function App() {
             )}
         </div>
       </div>
-    );
-  }
-
-  // ── Admin Login Page (standalone) ──
-  if (viewMode === 'admin-login') {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)', textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
-            <Shield size={24} color="#38bdf8" />
-          </div>
-          <h2 style={{ fontFamily: 'Outfit', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin Access</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24 }}>Enter the admin password to continue</p>
-          <AdminLoginForm
-            apiUrl={API_URL}
-            onSuccess={(pwd) => { setAdminPassword(pwd); setViewMode('admin'); }}
-            onBack={() => setViewMode('login')}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // ── Admin Dashboard Page (standalone) ──
-  if (viewMode === 'admin') {
-    return (
-      <AdminView adminPassword={adminPassword} apiUrl={API_URL}
-        onLogout={() => { setAdminPassword(''); setViewMode('login'); }} />
     );
   }
 
