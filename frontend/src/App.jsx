@@ -34,6 +34,49 @@ const API_BASE = ''; // Proxy-less since Vite serves from same domain in product
 // Users set their server IP in Settings; stored in localStorage as 'treemind_server_url'
 const isCapacitor = window.Capacitor !== undefined;
 
+// ── Admin Login Form (standalone page component) ──
+function AdminLoginForm({ apiUrl, onSuccess, onBack }) {
+  const [pwd, setPwd] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!pwd) return;
+    setLoading(true); setError('');
+    fetch(`${apiUrl}/api/admin/stats`, { headers: { 'x-admin-password': pwd } })
+      .then(r => {
+        if (r.ok) onSuccess(pwd);
+        else setError('Invalid admin password');
+      })
+      .catch(() => setError('Connection failed'))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <input type="password" placeholder="Admin Password" value={pwd} onChange={e => setPwd(e.target.value)}
+        required style={{
+          width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border-color)',
+          background: 'var(--bg-deep)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+          textAlign: 'center'
+        }} />
+      {error && <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>{error}</p>}
+      <button type="submit" className="action-btn" disabled={loading}
+        style={{ width: '100%', justifyContent: 'center', opacity: loading ? 0.6 : 1 }}>
+        {loading ? 'Verifying...' : <><Shield size={14} style={{ marginRight: 6 }} /> Enter Admin</>}
+      </button>
+      <button type="button" onClick={onBack}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+          fontSize: 13, padding: '4px 0', marginTop: 4
+        }}>
+        ← Back to Login
+      </button>
+    </form>
+  );
+}
+
 export default function App() {
   // Authentication State
   const [password, setPassword] = useState(() => localStorage.getItem('tm_password') || '');
@@ -126,10 +169,10 @@ export default function App() {
   const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
   const [renameInputValue, setRenameInputValue] = useState('');
 
-  // Admin Dashboard State
-  const [showAdmin, setShowAdmin] = useState(false);
+  // Admin Dashboard State — page-based routing (no router needed)
+  // 'login' = normal app login, 'admin-login' = admin password page, 'admin' = admin dashboard
+  const [viewMode, setViewMode] = useState('login');
   const [adminPassword, setAdminPassword] = useState('');
-  const [adminLoginError, setAdminLoginError] = useState('');
 
   // Authenticate on mount or password change
   useEffect(() => {
@@ -913,7 +956,7 @@ export default function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowAdmin(true)}
+                onClick={(e) => { e.preventDefault(); setViewMode('admin-login'); }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--text-muted)', fontSize: 12, marginTop: 16,
@@ -984,62 +1027,37 @@ export default function App() {
               </form>
             </div>
           </div>
-        )}
-        {/* Admin Dashboard — shown on login screen only */}
-        {showAdmin && !adminPassword && (
-          <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={() => setShowAdmin(false)}>
-            <div className="modal-container glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, width: 'calc(100% - 32px)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 600 }}>
-                  <Shield size={18} style={{ marginRight: 8, verticalAlign: 'text-bottom' }} />
-                  Admin Access
-                </h2>
-                <button className="modal-close-btn" onClick={() => setShowAdmin(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const pwd = e.target.querySelector('input[type=password]').value;
-                fetch(`${API_URL}/api/admin/stats`, {
-                  headers: { 'x-admin-password': pwd }
-                }).then(r => {
-                  if (r.ok) setAdminPassword(pwd);
-                  else setAdminLoginError('Invalid admin password');
-                }).catch(() => setAdminLoginError('Connection failed'));
-              }} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-                <input
-                  type="password"
-                  className="lock-input"
-                  placeholder="Admin Password"
-                  required
-                  style={{ marginTop: 0 }}
-                />
-                {adminLoginError && <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>{adminLoginError}</p>}
-                <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
-                  <Shield size={14} style={{ marginRight: 6 }} /> Enter Admin
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-        {showAdmin && adminPassword && (
-          <div className="modal-overlay" style={{ zIndex: 9999, overflow: 'auto', padding: 'clamp(8px, 2vw, 40px)' }}>
-            <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-deep)', padding: '8px 0' }}>
-                <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Shield size={18} /> Admin
-                </h2>
-                <button className="modal-close-btn" onClick={() => { setShowAdmin(false); setAdminPassword(''); setAdminLoginError(''); }} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 6 }}>
-                  <X size={18} />
-                </button>
-              </div>
-              <AdminView adminPassword={adminPassword} apiUrl={API_URL} />
-            </div>
-          </div>
-        )}
+            )}
         </div>
       </div>
+    );
+  }
+
+  // ── Admin Login Page (standalone) ──
+  if (viewMode === 'admin-login') {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ background: 'var(--bg-elevated)', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, boxShadow: 'var(--shadow-lg)', textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+            <Shield size={24} color="#38bdf8" />
+          </div>
+          <h2 style={{ fontFamily: 'Outfit', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin Access</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24 }}>Enter the admin password to continue</p>
+          <AdminLoginForm
+            apiUrl={API_URL}
+            onSuccess={(pwd) => { setAdminPassword(pwd); setViewMode('admin'); }}
+            onBack={() => setViewMode('login')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Admin Dashboard Page (standalone) ──
+  if (viewMode === 'admin') {
+    return (
+      <AdminView adminPassword={adminPassword} apiUrl={API_URL}
+        onLogout={() => { setAdminPassword(''); setViewMode('login'); }} />
     );
   }
 
