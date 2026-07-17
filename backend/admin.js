@@ -113,7 +113,9 @@ router.get('/stats', async (_req, res) => {
 // ══════════════════════════════════════════════════════════════════════════
 router.get('/users', async (_req, res) => {
   try {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: true });
+    const { data, error } = await supabase.from('users')
+      .select('user_id, display_name, monthly_limit, is_disabled, created_at, password')
+      .order('created_at', { ascending: true });
     if (error) throw error;
 
     // Enrich with this-month note counts
@@ -131,8 +133,14 @@ router.get('/users', async (_req, res) => {
       monthCounts[n.user_id] = (monthCounts[n.user_id] || 0) + 1;
     });
 
+    // Never expose actual passwords; indicate whether one is set
     const enriched = (data || []).map(u => ({
-      ...u,
+      user_id: u.user_id,
+      display_name: u.display_name,
+      monthly_limit: u.monthly_limit,
+      is_disabled: u.is_disabled,
+      created_at: u.created_at,
+      has_password: !!u.password,
       monthNoteCount: monthCounts[u.user_id] || 0
     }));
 
@@ -147,21 +155,22 @@ router.get('/users', async (_req, res) => {
 // 3. POST /api/admin/users — create a user
 // ══════════════════════════════════════════════════════════════════════════
 router.post('/users', async (req, res) => {
-  const { user_id, display_name, monthly_limit } = req.body;
+  const { user_id, display_name, monthly_limit, password } = req.body;
   if (!user_id) return res.status(400).json({ error: 'user_id is required.' });
 
   try {
-    const { data, error } = await supabase.from('users')
-      .upsert({
-        user_id,
-        display_name: display_name || user_id,
-        monthly_limit: monthly_limit || 20,
-        is_disabled: false,
-      }, { onConflict: 'user_id' });
+    const row = {
+      user_id,
+      display_name: display_name || user_id,
+      monthly_limit: monthly_limit || 20,
+      is_disabled: false,
+    };
+    if (password) row.password = password;
+    const { error } = await supabase.from('users').upsert(row, { onConflict: 'user_id' });
     if (error) throw error;
 
-    await auditLog('admin', 'user_created', `Created user ${user_id}, limit ${monthly_limit || 20}`);
-    res.json({ success: true, user_id, display_name: display_name || user_id, monthly_limit: monthly_limit || 20 });
+    await auditLog('admin', 'user_created', `Created user ${user_id}, limit ${monthly_limit || 20}${password ? ', password set' : ''}`);
+    res.json({ success: true, user_id, display_name: row.display_name, monthly_limit: row.monthly_limit });
   } catch (err) {
     console.error('[Admin User Create Error]:', err.message);
     res.status(500).json({ error: err.message });
@@ -173,21 +182,21 @@ router.post('/users', async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════
 router.patch('/users/:id', async (req, res) => {
   const userId = req.params.id;
-  const { display_name, monthly_limit, is_disabled } = req.body;
+  const { display_name, monthly_limit, is_disabled, password } = req.body;
 
   try {
     const updates = {};
     if (display_name !== undefined) updates.display_name = display_name;
     if (monthly_limit !== undefined) updates.monthly_limit = monthly_limit;
     if (is_disabled !== undefined) updates.is_disabled = is_disabled;
+    if (password !== undefined) updates.password = password; // set or clear password
 
-    const { data, error } = await supabase.from('users')
+    const { error } = await supabase.from('users')
       .update(updates)
-      .eq('user_id', userId)
-      .select();
+      .eq('user_id', userId);
     if (error) throw error;
 
-    await auditLog('admin', 'user_updated', `Updated ${userId}: ${JSON.stringify(updates)}`);
+    await auditLog('admin', 'user_updated', `Updated ${userId}: ${JSON.stringify(Object.keys(updates))}`);
     res.json({ success: true });
   } catch (err) {
     console.error('[Admin User Update Error]:', err.message);

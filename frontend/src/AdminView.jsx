@@ -35,7 +35,7 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
 
   // Form states
   const [showCreateUser, setShowCreateUser] = useState(false);
-  const [newUser, setNewUser] = useState({ user_id: '', display_name: '', monthly_limit: '20' });
+  const [newUser, setNewUser] = useState({ user_id: '', display_name: '', monthly_limit: '20', password: '' });
   const [editSettings, setEditSettings] = useState({ global_monthly_limit: '', gemini_api_key: '', nvidia_api_key: '', apify_token: '', app_password: '' });
   const [showSettingsPasswords, setShowSettingsPasswords] = useState({});
   const [notesPage, setNotesPage] = useState(1);
@@ -72,7 +72,7 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
   // ── Actions ──
   const handleCreateUser = async () => {
     if (!newUser.user_id) return;
-    try { await adminFetch('/users', { method: 'POST', body: JSON.stringify(newUser) }); setNewUser({ user_id: '', display_name: '', monthly_limit: '20' }); setShowCreateUser(false); loadUsers(); loadStats(); } catch (e) { setError(e.message); }
+    try { await adminFetch('/users', { method: 'POST', body: JSON.stringify(newUser) }); setNewUser({ user_id: '', display_name: '', monthly_limit: '20', password: '' }); setShowCreateUser(false); loadUsers(); loadStats(); } catch (e) { setError(e.message); }
   };
   const handleToggleDisable = async (userId, isDisabled) => {
     try { await adminFetch(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ is_disabled: !isDisabled }) }); loadUsers(); } catch (e) { setError(e.message); }
@@ -298,9 +298,9 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
               {showCreateUser && (
                 <div className="admin-card" style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: isMobile ? 16 : 20, boxShadow: 'var(--shadow-sm)', border: '1px solid var(--accent-primary)' }}>
                   <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>New User</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
                     <div>
-                      <label style={labelStyle}>User ID</label>
+                      <label style={labelStyle}>User ID *</label>
                       <input value={newUser.user_id} onChange={e => setNewUser(p => ({ ...p, user_id: e.target.value }))} placeholder="e.g. user_42" style={inputStyle} />
                     </div>
                     <div>
@@ -308,13 +308,17 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
                       <input value={newUser.display_name} onChange={e => setNewUser(p => ({ ...p, display_name: e.target.value }))} placeholder="e.g. John" style={inputStyle} />
                     </div>
                     <div>
-                      <label style={labelStyle}>Limit</label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input type="number" value={newUser.monthly_limit} onChange={e => setNewUser(p => ({ ...p, monthly_limit: e.target.value }))} style={{ ...inputStyle, width: 80 }} />
-                        <button onClick={handleCreateUser} style={{ ...btnPrimary, whiteSpace: 'nowrap' }}><CheckCircle size={14} /> Create</button>
-                      </div>
+                      <label style={labelStyle}>Password</label>
+                      <input type="password" value={newUser.password} onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))} placeholder="Leave blank to use app default" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Monthly Limit</label>
+                      <input type="number" value={newUser.monthly_limit} onChange={e => setNewUser(p => ({ ...p, monthly_limit: e.target.value }))} style={inputStyle} />
                     </div>
                   </div>
+                  <button onClick={handleCreateUser} style={{ ...btnPrimary, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
+                    <CheckCircle size={14} /> Create User
+                  </button>
                 </div>
               )}
 
@@ -334,7 +338,14 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
                           {u.is_disabled ? 'Disabled' : 'Active'}
                         </span>
                       </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 10 }}>ID: {u.user_id}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 4 }}>ID: {u.user_id}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <span style={{ padding: '1px 8px', borderRadius: 10, fontSize: 10, fontWeight: 600,
+                          background: u.has_password ? '#dbeafe' : '#f1f5f9',
+                          color: u.has_password ? '#1d4ed8' : 'var(--text-muted)' }}>
+                          {u.has_password ? '🔑 Own password' : '🔑 Uses app default'}
+                        </span>
+                      </div>
                       {/* Usage bar */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ flex: 1, maxWidth: 200 }}>
@@ -352,6 +363,17 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
                         <input type="number" value={u.monthly_limit} onChange={e => handleUpdateUserLimit(u.user_id, e.target.value)}
                           style={{ width: 50, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: 13, textAlign: 'center', background: 'var(--bg-base)' }} />
                       </div>
+                      <button onClick={() => {
+                        const pwd = prompt(`Set password for ${u.user_id} (leave blank to remove custom password):`);
+                        if (pwd !== null) handleUpdateUserLimit(u.user_id, u.monthly_limit); // dummy await
+                        // Send PATCH with password
+                        adminFetch(`/users/${u.user_id}`, { method: 'PATCH', body: JSON.stringify({ password: pwd }) })
+                          .then(() => loadUsers())
+                          .catch(e => setError(e.message));
+                      }}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--accent-primary)' }}>
+                        Set Password
+                      </button>
                       <button onClick={() => handleToggleDisable(u.user_id, u.is_disabled)}
                         style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                           color: u.is_disabled ? '#059669' : '#dc2626' }}>

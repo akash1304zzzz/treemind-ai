@@ -52,19 +52,58 @@ function getUserPaths(userId) {
   return { vaultDir, queuePath, treePath, userId: safeUserId };
 }
 
-// Middleware to check app password
-function authMiddleware(req, res, next) {
+// Middleware to check app password (supports per-user passwords from DB)
+async function authMiddleware(req, res, next) {
   const password = req.headers['x-app-password'] || req.query.password;
+  const userId = req.headers['x-user-id'] || 'default';
+
+  // 1. Check per-user password in DB
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data: user } = await supabase.from('users')
+        .select('password, is_disabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (user) {
+        if (user.is_disabled) return res.status(403).json({ error: 'This account has been disabled. Contact the administrator.' });
+        if (user.password && password === user.password) return next();
+        if (!user.password && password === APP_PASSWORD) return next();
+        return res.status(401).json({ error: 'Unauthorized. Invalid password.' });
+      }
+    } catch (_) { /* fall through to shared password */ }
+  }
+
+  // 2. Fallback: shared APP_PASSWORD
   if (password === APP_PASSWORD) {
     next();
   } else {
-    res.status(401).json({ error: 'Unauthorized. Invalid app password.' });
+    res.status(401).json({ error: 'Unauthorized. Invalid password.' });
   }
 }
 
-// 1. Auth Endpoint
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
+// 1. Auth Endpoint — supports per-user passwords
+app.post('/api/login', async (req, res) => {
+  const { password, user_id } = req.body;
+  const userId = user_id || 'default';
+
+  // Check per-user password in DB
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data: user } = await supabase.from('users')
+        .select('password, is_disabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (user) {
+        if (user.is_disabled) return res.status(403).json({ error: 'This account has been disabled. Contact the administrator.' });
+        // User exists: check their password if set, otherwise fall back to APP_PASSWORD
+        const validPassword = user.password ? (password === user.password) : (password === APP_PASSWORD);
+        if (validPassword) return res.json({ success: true, token: password });
+        return res.status(401).json({ error: 'Invalid password' });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  // Fallback: shared APP_PASSWORD
   if (password === APP_PASSWORD) {
     res.json({ success: true, token: password });
   } else {
