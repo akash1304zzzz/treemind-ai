@@ -161,7 +161,7 @@ router.post('/users', async (req, res) => {
     if (error) throw error;
 
     await auditLog('admin', 'user_created', `Created user ${user_id}, limit ${monthly_limit || 20}`);
-    res.json({ success: true, user: data[0] });
+    res.json({ success: true, user_id, display_name: display_name || user_id, monthly_limit: monthly_limit || 20 });
   } catch (err) {
     console.error('[Admin User Create Error]:', err.message);
     res.status(500).json({ error: err.message });
@@ -188,7 +188,7 @@ router.patch('/users/:id', async (req, res) => {
     if (error) throw error;
 
     await auditLog('admin', 'user_updated', `Updated ${userId}: ${JSON.stringify(updates)}`);
-    res.json({ success: true, user: data[0] });
+    res.json({ success: true });
   } catch (err) {
     console.error('[Admin User Update Error]:', err.message);
     res.status(500).json({ error: err.message });
@@ -201,14 +201,13 @@ router.patch('/users/:id', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   const userId = req.params.id;
   try {
-    const { data, error } = await supabase.from('users')
+    const { error } = await supabase.from('users')
       .update({ is_disabled: true })
-      .eq('user_id', userId)
-      .select();
+      .eq('user_id', userId);
     if (error) throw error;
 
     await auditLog('admin', 'user_disabled', `Disabled user ${userId}`);
-    res.json({ success: true, user: data[0] });
+    res.json({ success: true });
   } catch (err) {
     console.error('[Admin User Delete Error]:', err.message);
     res.status(500).json({ error: err.message });
