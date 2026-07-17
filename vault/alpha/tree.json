@@ -95,5 +95,42 @@
     "dateProcessed": "2026-07-07 14:52",
     "filePath": "vault/alpha/Productivity/Tools/building_with_ai__a_streamlined_process.md",
     "thumbnailUrl": "/api/vault/alpha/thumbnails/building_with_ai__a_streamlined_process.jpg"
+  },
+  {
+    "id": "youtube_overview_1783612385",
+    "title": "YouTube Overview",
+    "url": "https://www.youtube.com/shorts/p4v1k8M_Nug",
+    "tags": [
+      "YouTube",
+      "Social Media",
+      "Content Sharing",
+      "Video Platform"
+    ],
+    "categoryPath": [
+      "Technology",
+      "Social Media"
+    ],
+    "snippet": "YouTube features and capabilities",
+    "dateProcessed": "2026-07-09 15:52",
+    "filePath": "vault/alpha/Technology/Social Media/youtube_overview.md",
+    "thumbnailUrl": "https://img.youtube.com/vi/p4v1k8M_Nug/hqdefault.jpg"
+  },
+  {
+    "id": "error69_s_video_note_1784228909",
+    "title": "error69's Video Note",
+    "url": "https://www.instagram.com/reels/Da2bZjUyAj8/",
+    "tags": [
+      "error69",
+      "social media",
+      "unknown content"
+    ],
+    "categoryPath": [
+      "Technology",
+      "Social Media"
+    ],
+    "snippet": "A video from error69 with no specific description",
+    "dateProcessed": "2026-07-16 19:07",
+    "filePath": "vault/alpha/Technology/Social Media/error69_s_video_note.md",
+    "thumbnailUrl": "https://oypqhmkklmuwbvfhctmo.supabase.co/storage/v1/object/public/thumbnails/error69_s_video_note.jpg"
   }
 ]

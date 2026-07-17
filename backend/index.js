@@ -802,6 +802,371 @@ app.post('/api/note/delete', authMiddleware, async (req, res) => {
   }
 });
 
+// --- Chatbot Feature Helpers ---
+
+// Helper to extract chat history from markdown content
+function extractChatHistory(markdown) {
+  if (!markdown) return [];
+  const match = markdown.match(/<!-- CHAT_HISTORY_JSON:([\s\S]*?)-->/);
+  if (match) {
+    try {
+      return JSON.parse(match[1].trim());
+    } catch (e) {
+      console.error('Failed to parse CHAT_HISTORY_JSON from markdown:', e.message);
+    }
+  }
+  return [];
+}
+
+// Helper to remove chat history block from markdown content
+function getCleanNoteBody(markdown) {
+  if (!markdown) return '';
+  return markdown.replace(/<!-- CHAT_HISTORY_JSON:[\s\S]*?-->/g, '').trim();
+}
+
+// Helper to insert or replace chat history in markdown content
+function updateChatHistoryInMarkdown(markdown, messages) {
+  const cleanBody = getCleanNoteBody(markdown);
+  const jsonStr = JSON.stringify(messages);
+  return `${cleanBody}\n\n<!-- CHAT_HISTORY_JSON:${jsonStr} -->\n`;
+}
+
+// --- Chatbot Feature Endpoints ---
+
+// 9. Get Chat History for a Note
+app.get('/api/note/:id/chat', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.headers['x-user-id'] || 'default';
+  
+  let markdown = '';
+  
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('markdown_content')
+        .eq('user_id', userId)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) {
+        markdown = data.markdown_content || '';
+      }
+    } catch (err) {
+      console.error('[Supabase Note Chat Get Error]:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch note from database.' });
+    }
+  } else {
+    const { treePath } = getUserPaths(userId);
+    if (!fs.existsSync(treePath)) {
+      return res.status(404).json({ error: 'Vault tree index file not found.' });
+    }
+    try {
+      const content = fs.readFileSync(treePath, 'utf8');
+      const treeData = JSON.parse(content);
+      const note = treeData.find(n => n.id === id);
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found in index.' });
+      }
+      const fullFilePath = path.join(__dirname, '..', note.filePath);
+      if (fs.existsSync(fullFilePath)) {
+        markdown = fs.readFileSync(fullFilePath, 'utf8');
+      } else {
+        return res.status(404).json({ error: 'Note file not found on disk.' });
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Failed to read note chat history: ' + err.message });
+    }
+  }
+
+  const messages = extractChatHistory(markdown);
+  res.json({ success: true, messages });
+});
+
+// 10. Post new message to Note Chat
+app.post('/api/note/:id/chat', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+  const userId = req.headers['x-user-id'] || 'default';
+  
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'Message content is required.' });
+  }
+
+  let markdown = '';
+  let noteRecord = null;
+  
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        return res.status(404).json({ error: 'Note not found.' });
+      }
+      markdown = data.markdown_content || '';
+      noteRecord = data;
+    } catch (err) {
+      console.error('[Supabase Note Chat Post Error]:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch note from database.' });
+    }
+  } else {
+    const { treePath } = getUserPaths(userId);
+    if (!fs.existsSync(treePath)) {
+      return res.status(404).json({ error: 'Vault tree index file not found.' });
+    }
+    try {
+      const content = fs.readFileSync(treePath, 'utf8');
+      const treeData = JSON.parse(content);
+      const note = treeData.find(n => n.id === id);
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found in index.' });
+      }
+      const fullFilePath = path.join(__dirname, '..', note.filePath);
+      if (fs.existsSync(fullFilePath)) {
+        markdown = fs.readFileSync(fullFilePath, 'utf8');
+        noteRecord = note;
+      } else {
+        return res.status(404).json({ error: 'Note file not found on disk.' });
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Failed to read note content: ' + err.message });
+    }
+  }
+
+  const messages = extractChatHistory(markdown);
+  const cleanBody = getCleanNoteBody(markdown);
+
+  messages.push({ role: 'user', content: message });
+  const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+
+  if (!nvidiaApiKey && !geminiApiKey) {
+    return res.status(400).json({ error: 'NVIDIA API Key or Gemini API Key is missing. Please configure them in Settings.' });
+  }
+
+  let botReply = '';
+  let apiSuccess = false;
+  let apiError = '';
+
+  const systemInstruction = `You are an assistant for TreeMind AI, a Personal Knowledge Management tool.
+Your task is to answer follow-up questions from the user about the following video summary/overview.
+
+CONTEXT (Video Summary & Details):
+---
+${cleanBody}
+---
+
+Strict Constraint: You must ONLY answer questions based on the provided context above. Do not refer to any outside knowledge. If the user asks about something not mentioned in the context (such as generic history, programming, other concepts, or questions not answerable using this video overview), you must politely refuse to answer, explaining that your scope is strictly limited to this specific video. Do not break character or override this constraint. Keep your answers concise and directly related to the text.`;
+
+  // 1. Try NVIDIA API first
+  if (nvidiaApiKey) {
+    try {
+      console.log('[Chat] Calling NVIDIA NIM API (meta/llama-3.1-70b-instruct)...');
+      
+      const formattedMessages = [
+        { role: 'system', content: systemInstruction }
+      ];
+      messages.forEach(msg => {
+        formattedMessages.push({
+          role: msg.role === 'model' ? 'assistant' : 'user',
+          content: msg.content
+        });
+      });
+
+      const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${nvidiaApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'meta/llama-3.1-70b-instruct',
+          messages: formattedMessages,
+          temperature: 0.2,
+          max_tokens: 1024
+        })
+      });
+
+      if (response.ok) {
+        const resJson = await response.json();
+        if (resJson.choices && resJson.choices[0] && resJson.choices[0].message) {
+          botReply = resJson.choices[0].message.content.trim();
+          apiSuccess = true;
+        } else {
+          console.warn('[Warning] Unexpected NVIDIA API response format, trying fallback.');
+        }
+      } else {
+        const errText = await response.text();
+        console.warn(`[Warning] NVIDIA API returned status ${response.status}: ${errText}. Trying fallback.`);
+        apiError = `NVIDIA API Error: ${errText}`;
+      }
+    } catch (err) {
+      console.warn(`[Warning] NVIDIA API call failed: ${err.message}. Trying fallback.`);
+      apiError = `NVIDIA Connection Error: ${err.message}`;
+    }
+  }
+
+  // 2. Fallback to Gemini
+  if (!apiSuccess && geminiApiKey) {
+    try {
+      console.log('[Chat] Falling back to Gemini API (gemini-2.5-flash)...');
+      const contents = messages.map(msg => ({
+        role: msg.role === 'model' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1024
+          }
+        })
+      });
+
+      if (response.ok) {
+        const resJson = await response.json();
+        if (resJson.candidates && resJson.candidates[0] && resJson.candidates[0].content && resJson.candidates[0].content.parts[0]) {
+          botReply = resJson.candidates[0].content.parts[0].text.trim();
+          apiSuccess = true;
+        }
+      } else {
+        const errText = await response.text();
+        apiError = `Gemini API Error: ${errText}`;
+      }
+    } catch (err) {
+      apiError = `Gemini Connection Error: ${err.message}`;
+    }
+  }
+
+  if (!apiSuccess) {
+    return res.status(500).json({ error: `AI Generation failed. ${apiError}` });
+  }
+
+  messages.push({ role: 'model', content: botReply });
+
+  const updatedMarkdown = updateChatHistoryInMarkdown(markdown, messages);
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ markdown_content: updatedMarkdown })
+        .eq('id', id)
+        .eq('user_id', userId);
+      if (error) throw error;
+    } catch (err) {
+      console.error('[Supabase Note Chat Update Error]:', err.message);
+      return res.status(500).json({ error: 'Failed to save updated chat to database.' });
+    }
+  }
+
+  if (noteRecord && (noteRecord.file_path || noteRecord.filePath)) {
+    const relPath = noteRecord.file_path || noteRecord.filePath;
+    const fullFilePath = path.join(__dirname, '..', relPath);
+    try {
+      fs.mkdirSync(path.dirname(fullFilePath), { recursive: true });
+      fs.writeFileSync(fullFilePath, updatedMarkdown, 'utf8');
+    } catch (err) {
+      console.warn(`[Local Note Chat Write Warning]: Could not write note file locally:`, err.message);
+    }
+  }
+
+  res.json({ success: true, messages });
+});
+
+// 11. Reset Chat History for a Note
+app.post('/api/note/:id/chat/reset', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.headers['x-user-id'] || 'default';
+
+  let markdown = '';
+  let noteRecord = null;
+  
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        return res.status(404).json({ error: 'Note not found.' });
+      }
+      markdown = data.markdown_content || '';
+      noteRecord = data;
+    } catch (err) {
+      console.error('[Supabase Note Chat Reset Error]:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch note from database.' });
+    }
+  } else {
+    const { treePath } = getUserPaths(userId);
+    if (!fs.existsSync(treePath)) {
+      return res.status(404).json({ error: 'Vault tree index file not found.' });
+    }
+    try {
+      const content = fs.readFileSync(treePath, 'utf8');
+      const treeData = JSON.parse(content);
+      const note = treeData.find(n => n.id === id);
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found in index.' });
+      }
+      const fullFilePath = path.join(__dirname, '..', note.filePath);
+      if (fs.existsSync(fullFilePath)) {
+        markdown = fs.readFileSync(fullFilePath, 'utf8');
+        noteRecord = note;
+      } else {
+        return res.status(404).json({ error: 'Note file not found on disk.' });
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Failed to read note: ' + err.message });
+    }
+  }
+
+  const updatedMarkdown = getCleanNoteBody(markdown);
+
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ markdown_content: updatedMarkdown })
+        .eq('id', id)
+        .eq('user_id', userId);
+      if (error) throw error;
+    } catch (err) {
+      console.error('[Supabase Note Chat Reset Update Error]:', err.message);
+      return res.status(500).json({ error: 'Failed to save note to database.' });
+    }
+  }
+
+  if (noteRecord && (noteRecord.file_path || noteRecord.filePath)) {
+    const relPath = noteRecord.file_path || noteRecord.filePath;
+    const fullFilePath = path.join(__dirname, '..', relPath);
+    try {
+      fs.writeFileSync(fullFilePath, updatedMarkdown, 'utf8');
+    } catch (err) {
+      console.warn(`[Local Note Chat Reset Write Warning]: Could not write note file locally:`, err.message);
+    }
+  }
+
+  res.json({ success: true, messages: [] });
+});
+
 if (process.env.SENTRY_DSN) {
   Sentry.setupExpressErrorHandler(app);
 }

@@ -85,6 +85,10 @@ export default function App() {
   const [selectedNote, setSelectedNote] = useState(null);
   const [noteContent, setNoteContent] = useState('');
   const [loadingNote, setLoadingNote] = useState(false);
+  const [chatTab, setChatTab] = useState('details'); // 'details' | 'chat'
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
   
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
@@ -203,12 +207,111 @@ export default function App() {
       setLoading(false);
     }
   };
+  // Chatbot logic functions
+  const fetchChatHistory = async (noteId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/note/${noteId}/chat`, {
+        headers: {
+          'x-app-password': password,
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setChatMessages(data.messages || []);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch chat history:', e);
+    }
+  };
+
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
+    const text = chatInput.trim();
+    if (!text || !selectedNote) return;
+
+    // Optimistically update chat history
+    setChatMessages(prev => [...prev, { role: 'user', content: text }]);
+    setChatInput('');
+    setSendingMessage(true);
+
+    try {
+      const res = await fetch(`${API_URL}/api/note/${selectedNote.id}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-password': password,
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
+        },
+        body: JSON.stringify({ message: text })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setChatMessages(data.messages || []);
+        } else {
+          alert('Error: ' + (data.error || 'Failed to send message'));
+        }
+      } else {
+        const errText = await res.text();
+        let parsedErr = errText;
+        try {
+          const errJson = JSON.parse(errText);
+          parsedErr = errJson.error || errText;
+        } catch (_) {}
+        alert('Error: ' + parsedErr);
+      }
+    } catch (err) {
+      alert('Network error: ' + err.message);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleResetChat = async () => {
+    if (!selectedNote) return;
+    if (!window.confirm('Are you sure you want to reset and clear the chat history for this summary?')) return;
+    
+    setSendingMessage(true);
+    try {
+      const res = await fetch(`${API_URL}/api/note/${selectedNote.id}/chat/reset`, {
+        method: 'POST',
+        headers: {
+          'x-app-password': password,
+          'x-user-id': userId,
+          'Bypass-Tunnel-Reminder': 'true'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setChatMessages([]);
+        }
+      } else {
+        alert('Failed to reset chat history.');
+      }
+    } catch (err) {
+      alert('Network error: ' + err.message);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   // Load specific note content
   const loadNoteContent = async (note) => {
     setLoadingNote(true);
     setSelectedNote(note);
     setNoteContent('');
+    setChatTab('details');
+    setChatMessages([]);
+    setChatInput('');
+    fetchChatHistory(note.id);
+
     posthog.capture('note_viewed', { 
       noteId: note.id, 
       title: note.title, 
@@ -221,7 +324,7 @@ export default function App() {
     setEditTagsInput(note.tags ? note.tags.join(', ') : '');
     setNewMainCategory('');
     setNewSubCategory('');
-
+ 
     try {
       const cleanPath = note.filePath.replace('vault/', '');
       const encodedPath = encodeURIComponent(cleanPath).replace(/%2F/g, '/');
@@ -236,7 +339,9 @@ export default function App() {
         const text = await res.text();
         // Remove yaml frontmatter for rendering
         const cleaned = text.replace(/^---[\s\S]*?---\n*/, '');
-        setNoteContent(cleaned);
+        // Also strip chat history block if present in loaded file content
+        const cleanContent = cleaned.replace(/<!-- CHAT_HISTORY_JSON:[\s\S]*?-->/g, '').trim();
+        setNoteContent(cleanContent);
       } else {
         setNoteContent('Failed to load note content.');
       }
@@ -1799,97 +1904,178 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700 }}>Source Metadata</h3>
-                      
-                      {/* YouTube Iframe Player if applicable */}
-                      {getYoutubeEmbed(selectedNote.url) ? (
-                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                          <iframe
-                            src={getYoutubeEmbed(selectedNote.url)}
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                            frameBorder="0"
-                            allowFullScreen
-                          />
-                        </div>
-                      ) : (
-                        // Instagram Thumbnail and redirect
-                        selectedNote.thumbnailUrl && (
-                          <div style={{ height: '200px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                            <img 
-                              src={getThumbnailUrl(selectedNote.thumbnailUrl)} 
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              alt="Thumbnail preview"
-                            />
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    {/* Tab Navigation */}
+                    <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '3px', marginBottom: '16px', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setChatTab('details')}
+                        className={`view-toggle-btn ${chatTab === 'details' ? 'active' : ''}`}
+                        style={{ flex: 1, padding: '8px', border: 'none', fontSize: '13px', fontWeight: 600 }}
+                      >
+                        Video Details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setChatTab('chat')}
+                        className={`view-toggle-btn ${chatTab === 'chat' ? 'active' : ''}`}
+                        style={{ flex: 1, padding: '8px', border: 'none', fontSize: '13px', fontWeight: 600 }}
+                      >
+                        Chat Bot
+                      </button>
+                    </div>
+
+                    {chatTab === 'details' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Source Metadata</h3>
+                          
+                          {/* YouTube Iframe Player if applicable */}
+                          {getYoutubeEmbed(selectedNote.url) ? (
+                            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                              <iframe
+                                src={getYoutubeEmbed(selectedNote.url)}
+                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                                frameBorder="0"
+                                allowFullScreen
+                              />
+                            </div>
+                          ) : (
+                            // Instagram Thumbnail and redirect
+                            selectedNote.thumbnailUrl && (
+                              <div style={{ height: '200px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                <img 
+                                  src={getThumbnailUrl(selectedNote.thumbnailUrl)} 
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  alt="Thumbnail preview"
+                                />
+                              </div>
+                            )
+                          )}
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 13 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>Source Link:</span>
+                              <a href={selectedNote.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span>Open Video</span>
+                                <ExternalLink size={12} />
+                              </a>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>Processed At:</span>
+                              <span style={{ color: 'var(--text-primary)' }}>{selectedNote.dateProcessed}</span>
+                            </div>
                           </div>
-                        )
-                      )}
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: 13 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Source Link:</span>
-                          <a href={selectedNote.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <span>Open Video</span>
-                            <ExternalLink size={12} />
-                          </a>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Processed At:</span>
-                          <span style={{ color: 'var(--text-primary)' }}>{selectedNote.dateProcessed}</span>
+
+                        <div className="glass-panel" style={{ padding: '24px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Keywords & Taxonomy</h3>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {selectedNote.tags.length > 0 ? (
+                              selectedNote.tags.map(tag => (
+                                <span key={tag} className="tag-badge" style={{ fontSize: 12 }}>{tag}</span>
+                              ))
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>No tags assigned</span>
+                            )}
+                          </div>
+                          <div style={{ marginTop: '16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Folder Location:</p>
+                            <code style={{ background: 'var(--bg-base)', padding: '4px 8px', borderRadius: '4px', display: 'block', wordBreak: 'break-all' }}>
+                              {selectedNote.filePath}
+                            </code>
+                          </div>
+                          
+                          <button 
+                            className="action-btn"
+                            style={{
+                              width: '100%',
+                              marginTop: '20px',
+                              background: 'var(--accent-glow)',
+                              color: 'var(--accent-primary)',
+                              border: '1px solid var(--accent-primary)',
+                              justifyContent: 'center'
+                            }}
+                            onClick={() => setIsEditingMeta(true)}
+                          >
+                            ✏️ Edit Classification & Tags
+                          </button>
+                          <button 
+                            className="action-btn"
+                            style={{
+                              width: '100%',
+                              marginTop: '10px',
+                              background: 'rgba(239, 68, 68, 0.08)',
+                              color: '#ef4444',
+                              border: '1px solid rgba(239, 68, 68, 0.25)',
+                              justifyContent: 'center'
+                            }}
+                            onClick={handleDeleteNote}
+                            disabled={deletingNote}
+                          >
+                            🗑️ {deletingNote ? 'Deleting...' : 'Delete Note'}
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="chat-container">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            Scope: Only this video overview
+                          </span>
+                          <button
+                            onClick={handleResetChat}
+                            className="chat-reset-btn"
+                            style={{ border: 'none', margin: 0, padding: '4px 8px' }}
+                          >
+                            Reset Chat
+                          </button>
+                        </div>
 
-                    <div className="glass-panel" style={{ padding: '24px', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700 }}>Keywords & Taxonomy</h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {selectedNote.tags.length > 0 ? (
-                          selectedNote.tags.map(tag => (
-                            <span key={tag} className="tag-badge" style={{ fontSize: 12 }}>{tag}</span>
-                          ))
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>No tags assigned</span>
-                        )}
+                        <div className="chat-messages">
+                          {chatMessages.length === 0 ? (
+                            <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
+                              <p style={{ fontSize: '13px' }}>Ask follow-up questions about this video summary.</p>
+                            </div>
+                          ) : (
+                            chatMessages.map((msg, index) => (
+                              <div key={index} className={`chat-message ${msg.role}`}>
+                                <span style={{ fontWeight: 600, fontSize: '11px', marginBottom: '4px', opacity: 0.8 }}>
+                                  {msg.role === 'user' ? 'You' : 'TreeMind AI'}
+                                </span>
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                              </div>
+                            ))
+                          )}
+                          {sendingMessage && (
+                            <div className="chat-message model" style={{ alignSelf: 'flex-start', padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <RefreshCw className="animate-spin" size={14} color="#8b5cf6" />
+                              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Thinking...</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <form onSubmit={handleSendMessage} className="chat-input-container">
+                          <input
+                            type="text"
+                            className="chat-input"
+                            placeholder="Ask a question about this video..."
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            disabled={sendingMessage}
+                          />
+                          <button
+                            type="submit"
+                            className="action-btn"
+                            style={{ padding: '10px 18px' }}
+                            disabled={sendingMessage || !chatInput.trim()}
+                          >
+                            Send
+                          </button>
+                        </form>
                       </div>
-                      <div style={{ marginTop: '16px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Folder Location:</p>
-                        <code style={{ background: 'var(--bg-base)', padding: '4px 8px', borderRadius: '4px', display: 'block', wordBreak: 'break-all' }}>
-                          {selectedNote.filePath}
-                        </code>
-                      </div>
-                      
-                      <button 
-                        className="action-btn"
-                        style={{
-                          width: '100%',
-                          marginTop: '20px',
-                          background: 'var(--accent-glow)',
-                          color: 'var(--accent-primary)',
-                          border: '1px solid var(--accent-primary)',
-                          justifyContent: 'center'
-                        }}
-                        onClick={() => setIsEditingMeta(true)}
-                      >
-                        ✏️ Edit Classification & Tags
-                      </button>
-                      <button 
-                        className="action-btn"
-                        style={{
-                          width: '100%',
-                          marginTop: '10px',
-                          background: 'rgba(239, 68, 68, 0.08)',
-                          color: '#ef4444',
-                          border: '1px solid rgba(239, 68, 68, 0.25)',
-                          justifyContent: 'center'
-                        }}
-                        onClick={handleDeleteNote}
-                        disabled={deletingNote}
-                      >
-                        🗑️ {deletingNote ? 'Deleting...' : 'Delete Note'}
-                      </button>
-                    </div>
-                  </>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

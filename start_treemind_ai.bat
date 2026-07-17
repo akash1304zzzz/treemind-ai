@@ -9,7 +9,7 @@ echo.
 set "PROJECT_DIR=%~dp0"
 
 echo [1/2] Launching Backend Server in a new window...
-start "TreeMind AI - Backend Server" cmd /c "cd /d \"%PROJECT_DIR%backend\" && echo Starting Node.js backend server... && node server.js"
+start "TreeMind AI - Backend Server" cmd /c "cd /d \"%PROJECT_DIR%backend\" && echo Starting Node.js backend server... && node index.js"
 
 echo [2/2] Launching Frontend Dev Server in a new window...
 start "TreeMind AI - Frontend Dev Server" cmd /c "cd /d \"%PROJECT_DIR%frontend\" && echo Starting Vite dev server... && npm run dev"

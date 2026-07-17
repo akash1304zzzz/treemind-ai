@@ -10,3 +10,5 @@
 - [x] https://www.instagram.com/reel/DaNNCBxoyjk/?igsh=MW84Nm90M2xwMHNzdg== (Processed: 2026-07-07 14:41) (Depth: Detailed Notes)
 - [x] https://www.instagram.com/p/DWjy_UlDep-/ (Processed: 2026-07-07 14:46) (Depth: Quick Summary)
 - [x] https://www.instagram.com/p/DWjy_UlDep-/ (Processed: 2026-07-07 14:52) (Depth: Fine-Grained Study)
+- [ ] https://www.youtube.com/shorts/123abc (Added: 2026-07-09 15:52) (Depth: Detailed Notes)
+- [x] https://www.instagram.com/reels/Da2bZjUyAj8/ (Processed: 2026-07-16 19:07) (Depth: Fine-Grained Study)
