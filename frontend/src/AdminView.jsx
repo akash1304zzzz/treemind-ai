@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, BarChart3, Settings, FileText, Clock, Shield,
   Trash2, Edit2, Play, Plus, CheckCircle, XCircle, AlertTriangle,
-  RefreshCw, ChevronDown, ChevronUp, Eye
+  RefreshCw
 } from 'lucide-react';
 
 const ADMIN_HEADERS = {
@@ -10,7 +10,22 @@ const ADMIN_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+// ── Responsive breakpoint helper ──
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth < breakpoint
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 export default function AdminView({ adminPassword, apiUrl }) {
+  const mobile = useIsMobile();
+
   // State
   const [activeTab, setActiveTab] = useState('stats');
   const [stats, setStats] = useState(null);
@@ -126,7 +141,7 @@ export default function AdminView({ adminPassword, apiUrl }) {
   };
 
   const handleDeleteNote = async (noteId) => {
-    if (!confirm(`Delete note ${noteId}? This cannot be undone.`)) return;
+    if (!confirm(`Delete note ${noteId}?`)) return;
     try {
       await adminFetch(`/notes/${noteId}`, { method: 'DELETE' });
       loadNotes(notesPage, notesFilter);
@@ -144,7 +159,7 @@ export default function AdminView({ adminPassword, apiUrl }) {
       if (editSettings.app_password) body.app_password = editSettings.app_password;
       await adminFetch('/settings', { method: 'PUT', body: JSON.stringify(body) });
       setError('');
-      alert('Settings saved successfully.');
+      alert('Settings saved.');
       loadSettings();
     } catch (e) { setError(e.message); }
   };
@@ -154,8 +169,7 @@ export default function AdminView({ adminPassword, apiUrl }) {
     setIngesting(true); setIngestLogs('Starting ingestion...\n');
     try {
       const res = await fetch(`${apiUrl}/api/admin/ingest`, {
-        method: 'POST',
-        headers,
+        method: 'POST', headers,
         body: JSON.stringify({ user_id: ingestUser }),
       });
       const reader = res.body.getReader();
@@ -173,26 +187,32 @@ export default function AdminView({ adminPassword, apiUrl }) {
 
   // ── Tabs ──
   const tabs = [
-    { key: 'stats', label: 'Stats', icon: <BarChart3 size={16} /> },
-    { key: 'users', label: 'Users', icon: <Users size={16} /> },
-    { key: 'settings', label: 'Settings', icon: <Settings size={16} /> },
-    { key: 'content', label: 'Content', icon: <FileText size={16} /> },
-    { key: 'audit', label: 'Audit Log', icon: <Shield size={16} /> },
+    { key: 'stats', label: mobile ? 'Stats' : 'Stats', icon: <BarChart3 size={mobile ? 14 : 16} /> },
+    { key: 'users', label: 'Users', icon: <Users size={mobile ? 14 : 16} /> },
+    { key: 'settings', label: 'Settings', icon: <Settings size={mobile ? 14 : 16} /> },
+    { key: 'content', label: 'Content', icon: <FileText size={mobile ? 14 : 16} /> },
+    { key: 'audit', label: 'Audit', icon: <Shield size={mobile ? 14 : 16} /> },
   ];
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-      {/* Tab bar — sticky at top of scrollable container */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 12, position: 'sticky', top: 0, background: 'var(--bg-deep)', zIndex: 10, backdropFilter: 'blur(12px)' }}>
+    <div style={{ maxWidth: mobile ? '100%' : 1100, margin: '0 auto', padding: mobile ? '0 4px' : '0' }}>
+      {/* Tab bar — sticky, wraps on mobile */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', gap: mobile ? 4 : 6, marginBottom: mobile ? 16 : 24,
+        borderBottom: '1px solid var(--border-color)', paddingBottom: 12,
+        position: 'sticky', top: 0, background: 'var(--bg-deep)', zIndex: 10, backdropFilter: 'blur(12px)'
+      }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
             style={{
-              padding: '8px 16px', borderRadius: 6, border: '1px solid transparent',
+              padding: mobile ? '6px 10px' : '8px 16px', borderRadius: 6, border: '1px solid transparent',
               background: activeTab === t.key ? 'var(--bg-elevated)' : 'transparent',
               color: activeTab === t.key ? 'var(--accent-primary)' : 'var(--text-secondary)',
               fontWeight: activeTab === t.key ? 600 : 400,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14,
-              boxShadow: activeTab === t.key ? 'var(--shadow-sm)' : 'none'
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: mobile ? 4 : 6,
+              fontSize: mobile ? 12 : 14, flexShrink: 0,
+              boxShadow: activeTab === t.key ? 'var(--shadow-sm)' : 'none',
+              whiteSpace: 'nowrap'
             }}>
             {t.icon} {t.label}
           </button>
@@ -201,35 +221,34 @@ export default function AdminView({ adminPassword, apiUrl }) {
 
       {/* Error banner */}
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', marginBottom: 20, color: '#991b1b', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AlertTriangle size={16} /> {error}
-          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}><XCircle size={16} /></button>
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: mobile ? '10px 12px' : '12px 16px', marginBottom: 16, color: '#991b1b', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <AlertTriangle size={16} /> <span style={{ flex: 1 }}>{error}</span>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}><XCircle size={16} /></button>
         </div>
       )}
 
       {/* ═══ STATS TAB ═══ */}
       {activeTab === 'stats' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: mobile ? 10 : 16 }}>
           {[
             { label: 'Total Users', value: stats?.userCount ?? '-', color: 'var(--accent-primary)' },
             { label: 'Total Notes', value: stats?.totalNotes ?? '-', color: '#8b5cf6' },
-            { label: 'Notes This Month', value: stats?.monthNotes ?? '-', color: '#10b981' },
-            { label: 'Pending Queue', value: stats?.pendingQueue ?? '-', color: '#f59e0b' },
+            { label: 'This Month', value: stats?.monthNotes ?? '-', color: '#10b981' },
+            { label: 'Queue', value: stats?.pendingQueue ?? '-', color: '#f59e0b' },
           ].map((t, i) => (
-            <div key={i} style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 24, boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 8 }}>{t.label}</div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: t.color }}>{t.value}</div>
+            <div key={i} style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 16 : 24, boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: mobile ? 11 : 13, marginBottom: 6 }}>{t.label}</div>
+              <div style={{ fontSize: mobile ? 26 : 32, fontWeight: 700, color: t.color }}>{t.value}</div>
             </div>
           ))}
-          {/* Per-user breakdown */}
           {stats?.perUserCounts && Object.keys(stats.perUserCounts).length > 0 && (
-            <div style={{ gridColumn: '1 / -1', background: 'var(--bg-elevated)', borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Notes per User</div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ gridColumn: '1 / -1', background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 14 : 20, boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Notes per User</div>
+              <div style={{ display: 'flex', gap: mobile ? 8 : 12, flexWrap: 'wrap' }}>
                 {Object.entries(stats.perUserCounts).sort((a, b) => b[1] - a[1]).map(([uid, count]) => (
-                  <div key={uid} style={{ padding: '8px 16px', background: 'var(--bg-base)', borderRadius: 6, fontSize: 13 }}>
+                  <div key={uid} style={{ padding: '6px 12px', background: 'var(--bg-base)', borderRadius: 6, fontSize: mobile ? 12 : 13 }}>
                     <span style={{ fontWeight: 600 }}>{uid}</span>
-                    <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>{count} notes</span>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>{count}</span>
                   </div>
                 ))}
               </div>
@@ -243,72 +262,108 @@ export default function AdminView({ adminPassword, apiUrl }) {
       {activeTab === 'users' && (
         <div>
           {/* Create user form */}
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 20, marginBottom: 20, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 14 : 20, marginBottom: 16, boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Create User</div>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'end' }}>
-              <div style={{ flex: 1, minWidth: 150 }}>
+            <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', gap: mobile ? 10 : 12, alignItems: mobile ? 'stretch' : 'end' }}>
+              <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>User ID</label>
                 <input value={newUser.user_id} onChange={e => setNewUser(p => ({ ...p, user_id: e.target.value }))}
                   placeholder="e.g. user_42" style={inputStyle} />
               </div>
-              <div style={{ flex: 1, minWidth: 150 }}>
+              <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Display Name</label>
                 <input value={newUser.display_name} onChange={e => setNewUser(p => ({ ...p, display_name: e.target.value }))}
                   placeholder="e.g. John" style={inputStyle} />
               </div>
-              <div style={{ width: 100 }}>
+              <div style={mobile ? {} : { width: 100 }}>
                 <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Monthly Limit</label>
                 <input type="number" value={newUser.monthly_limit} onChange={e => setNewUser(p => ({ ...p, monthly_limit: e.target.value }))}
                   style={inputStyle} />
               </div>
-              <button onClick={handleCreateUser} style={{ ...btnStyle, background: 'var(--accent-primary)', color: '#fff' }}>
+              <button onClick={handleCreateUser} style={{ ...btnStyle, background: 'var(--accent-primary)', color: '#fff', justifyContent: 'center', width: mobile ? '100%' : 'auto' }}>
                 <Plus size={14} /> Create
               </button>
             </div>
           </div>
 
-          {/* Users table */}
+          {/* Users table — cards on mobile, table on desktop */}
           <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-base)', textAlign: 'left' }}>
-                  <th style={thStyle}>User ID</th>
-                  <th style={thStyle}>Display Name</th>
-                  <th style={thStyle}>This Month</th>
-                  <th style={thStyle}>Monthly Limit</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Created</th>
-                  <th style={thStyle}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            {mobile ? (
+              /* Mobile: card layout */
+              <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(users || []).map(u => (
-                  <tr key={u.user_id} style={{ borderTop: '1px solid var(--border-color)' }}>
-                    <td style={tdStyle}><strong>{u.user_id}</strong></td>
-                    <td style={tdStyle}>{u.display_name}</td>
-                    <td style={tdStyle}>{u.monthNoteCount} / {u.monthly_limit}</td>
-                    <td style={tdStyle}>
-                      <input type="number" value={u.monthly_limit} onChange={e => handleUpdateUserLimit(u.user_id, e.target.value)}
-                        style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: 13 }} />
-                    </td>
-                    <td style={tdStyle}>
+                  <div key={u.user_id} style={{ padding: 14, borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-base)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <strong style={{ fontSize: 14 }}>{u.user_id}</strong>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
                         background: u.is_disabled ? '#fef2f2' : '#ecfdf5', color: u.is_disabled ? '#dc2626' : '#059669' }}>
                         {u.is_disabled ? <XCircle size={12} /> : <CheckCircle size={12} />}
                         {u.is_disabled ? 'Disabled' : 'Active'}
                       </span>
-                    </td>
-                    <td style={{ tdStyle, color: 'var(--text-muted)', fontSize: 12 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
-                    <td style={tdStyle}>
-                      <button onClick={() => handleToggleDisable(u.user_id, u.is_disabled)}
-                        style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, color: u.is_disabled ? '#059669' : '#dc2626' }}>
-                        {u.is_disabled ? 'Enable' : 'Disable'}
-                      </button>
-                    </td>
-                  </tr>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                      {u.display_name}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <span>{u.monthNoteCount} / {u.monthly_limit} this month</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input type="number" value={u.monthly_limit} onChange={e => handleUpdateUserLimit(u.user_id, e.target.value)}
+                          style={{ width: 50, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: 13, textAlign: 'center' }} />
+                        <button onClick={() => handleToggleDisable(u.user_id, u.is_disabled)}
+                          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                            color: u.is_disabled ? '#059669' : '#dc2626' }}>
+                          {u.is_disabled ? 'Enable' : 'Disable'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              /* Desktop: table layout */
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 700 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-base)', textAlign: 'left' }}>
+                      <th style={thStyle}>User ID</th>
+                      <th style={thStyle}>Display Name</th>
+                      <th style={thStyle}>This Month</th>
+                      <th style={thStyle}>Monthly Limit</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={thStyle}>Created</th>
+                      <th style={thStyle}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(users || []).map(u => (
+                      <tr key={u.user_id} style={{ borderTop: '1px solid var(--border-color)' }}>
+                        <td style={tdStyle}><strong>{u.user_id}</strong></td>
+                        <td style={tdStyle}>{u.display_name}</td>
+                        <td style={tdStyle}>{u.monthNoteCount} / {u.monthly_limit}</td>
+                        <td style={tdStyle}>
+                          <input type="number" value={u.monthly_limit} onChange={e => handleUpdateUserLimit(u.user_id, e.target.value)}
+                            style={{ width: 60, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: 13 }} />
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                            background: u.is_disabled ? '#fef2f2' : '#ecfdf5', color: u.is_disabled ? '#dc2626' : '#059669' }}>
+                            {u.is_disabled ? <XCircle size={12} /> : <CheckCircle size={12} />}
+                            {u.is_disabled ? 'Disabled' : 'Active'}
+                          </span>
+                        </td>
+                        <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: 12 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
+                        <td style={tdStyle}>
+                          <button onClick={() => handleToggleDisable(u.user_id, u.is_disabled)}
+                            style={{ padding: '4px 10px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, color: u.is_disabled ? '#059669' : '#dc2626' }}>
+                            {u.is_disabled ? 'Enable' : 'Disable'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             {loading.users && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>}
           </div>
         </div>
@@ -316,10 +371,10 @@ export default function AdminView({ adminPassword, apiUrl }) {
 
       {/* ═══ SETTINGS TAB ═══ */}
       {activeTab === 'settings' && (
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 24, boxShadow: 'var(--shadow-sm)', maxWidth: 500 }}>
-          <div style={{ fontWeight: 600, marginBottom: 20, fontSize: 16 }}>App-Wide Settings</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <SettingField label="Global Monthly Limit (per user)" type="number"
+        <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 16 : 24, boxShadow: 'var(--shadow-sm)', maxWidth: 500 }}>
+          <div style={{ fontWeight: 600, marginBottom: 16, fontSize: 16 }}>App-Wide Settings</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? 12 : 16 }}>
+            <SettingField label="Global Monthly Limit" type="number"
               value={editSettings.global_monthly_limit}
               onChange={e => setEditSettings(p => ({ ...p, global_monthly_limit: e.target.value }))} />
             <SettingField label="Gemini API Key" type="password"
@@ -334,7 +389,7 @@ export default function AdminView({ adminPassword, apiUrl }) {
             <SettingField label="App Password" type="password"
               value={editSettings.app_password}
               onChange={e => setEditSettings(p => ({ ...p, app_password: e.target.value }))} />
-            <button onClick={handleSaveSettings} style={{ ...btnStyle, background: 'var(--accent-primary)', color: '#fff', marginTop: 8 }}>
+            <button onClick={handleSaveSettings} style={{ ...btnStyle, background: 'var(--accent-primary)', color: '#fff', marginTop: 4, justifyContent: 'center', width: '100%' }}>
               <CheckCircle size={14} /> Save Settings
             </button>
           </div>
@@ -344,40 +399,44 @@ export default function AdminView({ adminPassword, apiUrl }) {
 
       {/* ═══ CONTENT TAB ═══ */}
       {activeTab === 'content' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? 14 : 20 }}>
           {/* Ingest trigger */}
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 14 : 20, boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Trigger Ingest</div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'end' }}>
+            <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', gap: mobile ? 8 : 12 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>User ID</label>
                 <input value={ingestUser} onChange={e => setIngestUser(e.target.value)}
                   placeholder="e.g. alpha" style={inputStyle} />
               </div>
               <button onClick={handleIngest} disabled={ingesting}
-                style={{ ...btnStyle, background: ingesting ? '#7c3aed' : 'var(--accent-primary)', color: '#fff', opacity: ingesting ? 0.7 : 1 }}>
+                style={{ ...btnStyle, background: ingesting ? '#7c3aed' : 'var(--accent-primary)', color: '#fff', opacity: ingesting ? 0.7 : 1, justifyContent: 'center', width: mobile ? '100%' : 'auto', marginTop: mobile ? 0 : 'auto' }}>
                 <Play size={14} /> {ingesting ? 'Processing...' : 'Ingest Queue'}
               </button>
             </div>
             {ingestLogs && (
-              <div style={{ marginTop: 12, background: '#0f172a', borderRadius: 8, padding: 12, fontFamily: 'monospace', fontSize: 12, color: '#10b981', maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+              <div style={{ marginTop: 10, background: '#0f172a', borderRadius: 8, padding: mobile ? 10 : 12, fontFamily: 'monospace', fontSize: mobile ? 11 : 12, color: '#10b981', maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                 {ingestLogs}
               </div>
             )}
           </div>
 
           {/* Global queue */}
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Global Queue ({queue.length} items)</div>
+          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 14 : 20, boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Queue ({queue.length})</div>
             {queue.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No pending items.</div>}
             <div style={{ maxHeight: 250, overflow: 'auto' }}>
               {queue.map(q => (
-                <div key={q.id || q.url} style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                  <div>
+                <div key={q.id || q.url} style={{
+                  padding: '8px 0', borderBottom: '1px solid var(--border-color)', fontSize: 13,
+                  display: 'flex', justifyContent: 'space-between', alignItems: mobile ? 'start' : 'center',
+                  flexDirection: mobile ? 'column' : 'row', gap: mobile ? 4 : 0
+                }}>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
                     <span style={{ fontWeight: 500 }}>{q.user_id || '-'}</span>
-                    <span style={{ color: 'var(--text-muted)', marginLeft: 12, fontSize: 12 }}>{q.url}</span>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 11, wordBreak: 'break-all' }}>{q.url}</span>
                   </div>
-                  <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                  <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, flexShrink: 0,
                     background: q.status === 'pending' ? '#fef3c7' : '#ecfdf5',
                     color: q.status === 'pending' ? '#92400e' : '#065f46' }}>
                     {q.status}
@@ -389,34 +448,33 @@ export default function AdminView({ adminPassword, apiUrl }) {
           </div>
 
           {/* Global notes */}
-          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>All Notes ({notes.total ?? 0})</div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ background: 'var(--bg-elevated)', borderRadius: 12, padding: mobile ? 14 : 20, boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: mobile ? 'stretch' : 'center', marginBottom: 12, gap: mobile ? 8 : 10 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Notes ({notes.total ?? 0})</div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <input value={notesFilter} onChange={e => { setNotesFilter(e.target.value); setNotesPage(1); loadNotes(1, e.target.value); }}
-                  placeholder="Filter by user_id" style={{ ...inputStyle, width: 160, padding: '6px 10px' }} />
+                  placeholder="Filter user" style={{ ...inputStyle, width: mobile ? 120 : 160, padding: '6px 10px', fontSize: 12 }} />
                 <button onClick={() => { setNotesPage(1); loadNotes(1, notesFilter); }}
-                  style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer' }}>
+                  style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', flexShrink: 0 }}>
                   <RefreshCw size={14} />
                 </button>
               </div>
             </div>
             {loading.notes && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</div>}
             {!loading.notes && (notes.notes || []).map(n => (
-              <div key={n.id} style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-color)', fontSize: 13 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{n.title}</div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
-                      <span style={{ marginRight: 12 }}>{n.user_id}</span>
-                      <span>{n.dateProcessed}</span>
-                      {(n.tags || []).slice(0, 3).map(t => (
-                        <span key={t} style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 10, fontSize: 10, background: '#ede9fe', color: '#6d28d9', marginLeft: 4 }}>{t}</span>
+              <div key={n.id} style={{ padding: mobile ? '10px 0' : '10px 12px', borderBottom: '1px solid var(--border-color)', fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, wordBreak: 'break-word' }}>{n.title}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: mobile ? 11 : 12, marginTop: 2 }}>
+                      <span style={{ marginRight: 8 }}>{n.user_id}</span>
+                      {(n.tags || []).slice(0, 2).map(t => (
+                        <span key={t} style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 10, fontSize: 10, background: '#ede9fe', color: '#6d28d9', marginRight: 3 }}>{t}</span>
                       ))}
                     </div>
                   </div>
                   <button onClick={() => handleDeleteNote(n.id)}
-                    style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #fecaca', background: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12 }}>
+                    style={{ padding: '6px 8px', borderRadius: 4, border: '1px solid #fecaca', background: 'none', cursor: 'pointer', color: '#dc2626', flexShrink: 0 }}>
                     <Trash2 size={12} />
                   </button>
                 </div>
@@ -426,7 +484,7 @@ export default function AdminView({ adminPassword, apiUrl }) {
               <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 12 }}>
                 <button onClick={() => { setNotesPage(p => Math.max(1, p - 1)); loadNotes(Math.max(1, notesPage - 1), notesFilter); }}
                   disabled={notesPage <= 1} style={{ ...btnStyle, opacity: notesPage <= 1 ? 0.5 : 1 }}>Prev</button>
-                <span style={{ fontSize: 13, alignSelf: 'center' }}>Page {notes.page} of {Math.ceil(notes.total / 50)}</span>
+                <span style={{ fontSize: 13, alignSelf: 'center' }}>{notes.page}/{Math.ceil(notes.total / 50)}</span>
                 <button onClick={() => { setNotesPage(p => p + 1); loadNotes(notesPage + 1, notesFilter); }}
                   disabled={notesPage >= Math.ceil(notes.total / 50)} style={{ ...btnStyle, opacity: notesPage >= Math.ceil(notes.total / 50) ? 0.5 : 1 }}>Next</button>
               </div>
@@ -437,15 +495,15 @@ export default function AdminView({ adminPassword, apiUrl }) {
 
       {/* ═══ AUDIT TAB ═══ */}
       {activeTab === 'audit' && (
-        <div style={{ background: '#0f172a', borderRadius: 12, padding: 20, fontFamily: 'monospace', fontSize: 13, maxHeight: 600, overflow: 'auto' }}>
+        <div style={{ background: '#0f172a', borderRadius: 12, padding: mobile ? 14 : 20, fontFamily: 'monospace', fontSize: mobile ? 11 : 13, maxHeight: 600, overflow: 'auto' }}>
           <div style={{ color: '#94a3b8', marginBottom: 12, fontWeight: 600 }}>Recent Admin Actions</div>
           {loading.audit && <div style={{ color: '#64748b' }}>Loading...</div>}
           {(auditLog || []).map(a => (
-            <div key={a.id} style={{ padding: '6px 0', borderBottom: '1px solid #1e293b' }}>
-              <span style={{ color: '#64748b' }}>{a.created_at ? new Date(a.created_at).toLocaleString() : '-'}</span>
-              <span style={{ color: '#10b981', marginLeft: 12 }}>{a.action}</span>
-              <span style={{ color: '#94a3b8', marginLeft: 8 }}>{a.detail}</span>
-              <span style={{ color: '#64748b', marginLeft: 8 }}>({a.actor})</span>
+            <div key={a.id} style={{ padding: '6px 0', borderBottom: '1px solid #1e293b', wordBreak: 'break-word' }}>
+              <span style={{ color: '#64748b', display: 'block', marginBottom: 2 }}>{a.created_at ? new Date(a.created_at).toLocaleString() : '-'}</span>
+              <span style={{ color: '#10b981' }}>{a.action}</span>
+              <span style={{ color: '#94a3b8', marginLeft: 6 }}>{a.detail}</span>
+              <span style={{ color: '#64748b', marginLeft: 6 }}>({a.actor})</span>
             </div>
           ))}
           {auditLog.length === 0 && !loading.audit && <div style={{ color: '#64748b' }}>No audit entries yet.</div>}

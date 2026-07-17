@@ -988,7 +988,7 @@ export default function App() {
         {/* Admin Dashboard — shown on login screen only */}
         {showAdmin && !adminPassword && (
           <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={() => setShowAdmin(false)}>
-            <div className="modal-container glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-container glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400, width: 'calc(100% - 32px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 600 }}>
                   <Shield size={18} style={{ marginRight: 8, verticalAlign: 'text-bottom' }} />
@@ -1024,11 +1024,11 @@ export default function App() {
           </div>
         )}
         {showAdmin && adminPassword && (
-          <div className="modal-overlay" style={{ zIndex: 9999, overflow: 'auto', padding: '40px 16px' }}>
-            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontFamily: 'Outfit', fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Shield size={22} /> Admin Dashboard
+          <div className="modal-overlay" style={{ zIndex: 9999, overflow: 'auto', padding: 'clamp(8px, 2vw, 40px)' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-deep)', padding: '8px 0' }}>
+                <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Shield size={18} /> Admin
                 </h2>
                 <button className="modal-close-btn" onClick={() => { setShowAdmin(false); setAdminPassword(''); setAdminLoginError(''); }} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 6 }}>
                   <X size={18} />
