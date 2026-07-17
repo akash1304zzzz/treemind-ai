@@ -911,6 +911,17 @@ export default function App() {
               <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
                 Decrypt Vault
               </button>
+              <button
+                type="button"
+                onClick={() => setShowAdmin(true)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-muted)', fontSize: 12, marginTop: 16,
+                  display: 'flex', alignItems: 'center', gap: 4, margin: '16px auto 0 auto'
+                }}
+              >
+                <Shield size={12} /> Admin
+              </button>
             </form>
             {isCapacitor && (
               <button 
@@ -971,6 +982,59 @@ export default function App() {
                   Save Server URL
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Admin Dashboard — shown on login screen only */}
+        {showAdmin && !adminPassword && (
+          <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={() => setShowAdmin(false)}>
+            <div className="modal-container glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 600 }}>
+                  <Shield size={18} style={{ marginRight: 8, verticalAlign: 'text-bottom' }} />
+                  Admin Access
+                </h2>
+                <button className="modal-close-btn" onClick={() => setShowAdmin(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const pwd = e.target.querySelector('input[type=password]').value;
+                fetch(`${API_URL}/api/admin/stats`, {
+                  headers: { 'x-admin-password': pwd }
+                }).then(r => {
+                  if (r.ok) setAdminPassword(pwd);
+                  else setAdminLoginError('Invalid admin password');
+                }).catch(() => setAdminLoginError('Connection failed'));
+              }} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+                <input
+                  type="password"
+                  className="lock-input"
+                  placeholder="Admin Password"
+                  required
+                  style={{ marginTop: 0 }}
+                />
+                {adminLoginError && <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>{adminLoginError}</p>}
+                <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
+                  <Shield size={14} style={{ marginRight: 6 }} /> Enter Admin
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+        {showAdmin && adminPassword && (
+          <div className="modal-overlay" style={{ zIndex: 9999, overflow: 'auto', padding: '40px 16px' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontFamily: 'Outfit', fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Shield size={22} /> Admin Dashboard
+                </h2>
+                <button className="modal-close-btn" onClick={() => { setShowAdmin(false); setAdminPassword(''); setAdminLoginError(''); }} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 6 }}>
+                  <X size={18} />
+                </button>
+              </div>
+              <AdminView adminPassword={adminPassword} apiUrl={API_URL} />
             </div>
           </div>
         )}
@@ -2177,61 +2241,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Admin Dashboard — shown as modal overlay */}
-      {showAdmin && !adminPassword && (
-        <div className="modal-overlay" style={{ zIndex: 9999 }} onClick={() => setShowAdmin(false)}>
-          <div className="modal-container glass-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontFamily: 'Outfit', fontSize: 18, fontWeight: 600 }}>
-                <Shield size={18} style={{ marginRight: 8, verticalAlign: 'text-bottom' }} />
-                Admin Access
-              </h2>
-              <button className="modal-close-btn" onClick={() => setShowAdmin(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const pwd = e.target.querySelector('input[type=password]').value;
-              // Verify admin password by hitting the stats endpoint
-              fetch(`${API_URL}/api/admin/stats`, {
-                headers: { 'x-admin-password': pwd }
-              }).then(r => {
-                if (r.ok) setAdminPassword(pwd);
-                else setAdminLoginError('Invalid admin password');
-              }).catch(() => setAdminLoginError('Connection failed'));
-            }} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-              <input
-                type="password"
-                className="lock-input"
-                placeholder="Admin Password"
-                required
-                style={{ marginTop: 0 }}
-              />
-              {adminLoginError && <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>{adminLoginError}</p>}
-              <button type="submit" className="action-btn" style={{ width: '100%', justifyContent: 'center' }}>
-                <Shield size={14} style={{ marginRight: 6 }} /> Enter Admin
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-      {showAdmin && adminPassword && (
-        <div className="modal-overlay" style={{ zIndex: 9999, overflow: 'auto', padding: '40px 16px' }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 style={{ fontFamily: 'Outfit', fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Shield size={22} /> Admin Dashboard
-              </h2>
-              <button className="modal-close-btn" onClick={() => { setShowAdmin(false); setAdminPassword(''); setAdminLoginError(''); }} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 6 }}>
-                <X size={18} />
-              </button>
-            </div>
-            <AdminView adminPassword={adminPassword} apiUrl={API_URL} />
-          </div>
-        </div>
-      )}
-
       {/* Mobile Bottom Navigation Bar */}
       <nav className="bottom-nav-bar">
         <button 
@@ -2261,15 +2270,6 @@ export default function App() {
         >
           <User size={20} />
           <span>Profile</span>
-        </button>
-        <button
-          className="bottom-nav-item"
-          onClick={() => setShowAdmin(true)}
-          style={{ color: 'var(--text-muted)' }}
-          aria-label="Admin Dashboard"
-        >
-          <Shield size={20} />
-          <span>Admin</span>
         </button>
       </nav>
     </div>
