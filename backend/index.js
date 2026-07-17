@@ -13,6 +13,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const supabase = require('./supabaseClient');
 const { ingestQueue } = require('./ingest');
+const { router: adminRouter, getEffectiveLimit } = require('./admin');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
@@ -23,6 +24,9 @@ const APP_PASSWORD = process.env.APP_PASSWORD || 'treemind123';
 
 app.use(cors());
 app.use(express.json());
+
+// Admin API routes (behind admin password)
+app.use('/api/admin', adminRouter);
 
 // Helper to get paths for a user
 function getUserPaths(userId) {
@@ -138,7 +142,22 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   
   const userId = req.headers['x-user-id'] || 'default';
 
-  // Enforcement check: Free tier limit of 20 videos per month
+  // Check if user is disabled (admin can disable users)
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('is_disabled')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (userRow && userRow.is_disabled) {
+        return res.status(403).json({ error: 'This account has been disabled. Contact the administrator.' });
+      }
+    } catch (_) { /* non-blocking */ }
+  }
+
+  // Enforcement check: dynamic monthly limit (per-user or global)
+  const monthlyLimit = await getEffectiveLimit(userId);
   let currentMonthCount = 0;
   if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
     try {
@@ -184,8 +203,8 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
     }
   }
 
-  if (currentMonthCount >= 20) {
-    return res.status(403).json({ error: 'Monthly limit of 20 video summaries reached on Free Tier. Please upgrade to Premium.' });
+  if (currentMonthCount >= monthlyLimit) {
+    return res.status(403).json({ error: `Monthly limit of ${monthlyLimit} video summaries reached. Please upgrade to Premium or contact your administrator.` });
   }
 
   const { queuePath } = getUserPaths(userId);
