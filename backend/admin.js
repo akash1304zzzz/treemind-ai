@@ -319,7 +319,7 @@ router.delete('/notes/:id', async (req, res) => {
   try {
     // Find note first for audit
     const { data: note } = await supabase.from('notes')
-      .select('id, title, user_id')
+      .select('id, title, user_id, thumbnail_url')
       .eq('id', noteId)
       .maybeSingle();
     if (!note) return res.status(404).json({ error: 'Note not found.' });
@@ -328,10 +328,14 @@ router.delete('/notes/:id', async (req, res) => {
     const { error } = await supabase.from('notes').delete().eq('id', noteId);
     if (error) throw error;
 
-    // Try to remove thumbnail
-    try {
-      await supabase.storage.from('thumbnails').remove([`${noteId}.jpg`]);
-    } catch (_) {}
+    // Remove thumbnail (stored under the sanitized title, not the note id)
+    const thumbUrl = note.thumbnail_url || '';
+    if (thumbUrl.includes('/thumbnails/')) {
+      const thumbName = thumbUrl.split('/thumbnails/')[1];
+      if (thumbName) {
+        supabase.storage.from('thumbnails').remove([thumbName]).catch(() => {});
+      }
+    }
 
     await auditLog('admin', 'note_deleted', `Deleted note ${noteId} (${note.title}) from user ${note.user_id}`);
     res.json({ success: true });

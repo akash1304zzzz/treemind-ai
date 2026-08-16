@@ -570,8 +570,31 @@ Return the response strictly inside the JSON schema.`;
     if (isSupabase) {
       logger(`[Supabase] Saving note to PostgreSQL...`);
       try {
+        // Dedupe: if this user already has a note for this URL, update it in place
+        // instead of inserting a duplicate row with a new timestamped id.
+        let effectiveId = noteId;
+        const { data: existingNote } = await supabase
+          .from('notes')
+          .select('id, thumbnail_url')
+          .eq('user_id', userId)
+          .eq('url', url)
+          .maybeSingle();
+
+        if (existingNote) {
+          effectiveId = existingNote.id;
+          logger(`[Supabase] Existing note found for this URL. Updating it (${effectiveId}).`);
+          // Best-effort: remove the old thumbnail if the title changed (filename differs)
+          const oldThumb = existingNote.thumbnail_url || '';
+          if (oldThumb.includes('/thumbnails/')) {
+            const oldThumbName = oldThumb.split('/thumbnails/')[1];
+            if (oldThumbName && oldThumbName !== `${sanitizedTitle}.jpg`) {
+              supabase.storage.from('thumbnails').remove([oldThumbName]).catch(() => {});
+            }
+          }
+        }
+
         const record = {
-          id: noteId,
+          id: effectiveId,
           user_id: userId,
           title,
           url,

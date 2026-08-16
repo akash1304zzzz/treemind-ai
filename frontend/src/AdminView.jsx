@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users, BarChart3, Settings, FileText, Shield,
   Trash2, Play, Plus, CheckCircle, XCircle, AlertTriangle,
   RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, LogOut, Search, Sliders
 } from 'lucide-react';
+import { useUI, AutoScrollConsole } from './ui.jsx';
 
 const ADMIN_HEADERS = { 'x-admin-password': '', 'Content-Type': 'application/json' };
 
@@ -18,6 +19,7 @@ function useWindowSize() {
 }
 
 export default function AdminView({ adminPassword, apiUrl, onLogout }) {
+  const { toast, confirmDialog } = useUI();
   const width = useWindowSize();
   const isMobile = width < 640;
   const isTablet = width < 1024;
@@ -44,12 +46,20 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
   const [ingesting, setIngesting] = useState(false);
   const [ingestUser, setIngestUser] = useState('');
 
+  // Inline editors for the user list: { userId: value } drafts, committed on blur/Enter
+  const [limitDrafts, setLimitDrafts] = useState({});
+  const [pwdEdit, setPwdEdit] = useState(null); // { userId, value }
+
   const headers = { ...ADMIN_HEADERS, 'x-admin-password': adminPassword };
 
   const adminFetch = useCallback(async (path, options = {}) => {
     const res = await fetch(`${apiUrl}/api/admin${path}`, { headers, ...options });
     if (res.status === 401) throw new Error('Invalid admin password');
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+    if (!res.ok) {
+      let msg = res.statusText;
+      try { msg = (await res.json()).error || msg; } catch (_) {}
+      throw new Error(msg);
+    }
     return res.json();
   }, [adminPassword, apiUrl]);
 
@@ -78,11 +88,30 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
     try { await adminFetch(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ is_disabled: !isDisabled }) }); loadUsers(); } catch (e) { setError(e.message); }
   };
   const handleUpdateUserLimit = async (userId, val) => {
-    try { await adminFetch(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ monthly_limit: parseInt(val, 10) }) }); loadUsers(); } catch (e) { setError(e.message); }
+    const parsed = parseInt(val, 10);
+    if (Number.isNaN(parsed)) { toast('Limit must be a number.', 'error'); loadUsers(); return; }
+    try {
+      await adminFetch(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ monthly_limit: parsed }) });
+      toast(`Limit updated to ${parsed} for ${userId}.`, 'success');
+      loadUsers();
+    } catch (e) { setError(e.message); loadUsers(); }
+  };
+  const handleSetPassword = async (userId, pwd) => {
+    try {
+      await adminFetch(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ password: pwd }) });
+      toast(pwd ? `Password set for ${userId}.` : `Custom password removed for ${userId}.`, 'success');
+      setPwdEdit(null);
+      loadUsers();
+    } catch (e) { setError(e.message); }
   };
   const handleDeleteNote = async (noteId) => {
-    if (!confirm(`Delete note ${noteId}?`)) return;
-    try { await adminFetch(`/notes/${noteId}`, { method: 'DELETE' }); loadNotes(notesPage, notesFilter); loadStats(); } catch (e) { setError(e.message); }
+    confirmDialog(`Delete note ${noteId}? This cannot be undone.`, {
+      danger: true,
+      confirmLabel: 'Delete Note',
+      onConfirm: async () => {
+        try { await adminFetch(`/notes/${noteId}`, { method: 'DELETE' }); toast('Note deleted.', 'success'); loadNotes(notesPage, notesFilter); loadStats(); } catch (e) { setError(e.message); }
+      }
+    });
   };
   const handleSaveSettings = async () => {
     try {
@@ -93,19 +122,35 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
       if (editSettings.apify_token) body.apify_token = editSettings.apify_token;
       if (editSettings.app_password) body.app_password = editSettings.app_password;
       await adminFetch('/settings', { method: 'PUT', body: JSON.stringify(body) });
-      setError(''); alert('Settings saved.'); loadSettings();
-    } catch (e) { setError(e.message); }
+      setError(''); toast('Settings saved.', 'success'); loadSettings();
+    } catch (e) { setError(e.message); toast('Failed to save settings: ' + e.message, 'error'); }
   };
   const handleIngest = async () => {
     if (!ingestUser) return;
     setIngesting(true); setIngestLogs('Starting ingestion...\n');
     try {
       const res = await fetch(`${apiUrl}/api/admin/ingest`, { method: 'POST', headers, body: JSON.stringify({ user_id: ingestUser }) });
+      if (!res.ok) {
+        const errText = await res.text();
+        let parsedErr = errText;
+        try { parsedErr = (JSON.parse(errText)).error || errText; } catch (_) {}
+        throw new Error(parsedErr || `HTTP ${res.status}`);
+      }
       const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
       while (true) { const { done, value } = await reader.read(); if (done) break; buffer += decoder.decode(value, { stream: true }); setIngestLogs(buffer); }
-    } catch (e) { setIngestLogs(prev => prev + `\nError: ${e.message}`); }
+      toast('Ingestion run finished.', 'success');
+    } catch (e) { setIngestLogs(prev => prev + `\nError: ${e.message}`); toast('Ingestion failed: ' + e.message, 'error'); }
     setIngesting(false);
   };
+
+  // Debounced notes filter
+  const filterTimer = useRef(null);
+  useEffect(() => {
+    if (activeTab !== 'content') return;
+    clearTimeout(filterTimer.current);
+    filterTimer.current = setTimeout(() => { loadNotes(1, notesFilter); }, 350);
+    return () => clearTimeout(filterTimer.current);
+  }, [notesFilter]);
 
   // ── Navigation items ──
   const navItems = [
@@ -360,20 +405,42 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', gap: 8, flexShrink: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)' }}>
                         <span>Limit:</span>
-                        <input type="number" value={u.monthly_limit} onChange={e => handleUpdateUserLimit(u.user_id, e.target.value)}
-                          style={{ width: 50, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: 13, textAlign: 'center', background: 'var(--bg-base)' }} />
+                        <input type="number"
+                          value={limitDrafts[u.user_id] !== undefined ? limitDrafts[u.user_id] : u.monthly_limit}
+                          onChange={e => setLimitDrafts(p => ({ ...p, [u.user_id]: e.target.value }))}
+                          onBlur={() => {
+                            const draft = limitDrafts[u.user_id];
+                            if (draft === undefined || String(u.monthly_limit) === String(draft)) return;
+                            handleUpdateUserLimit(u.user_id, draft);
+                            setLimitDrafts(p => { const n = { ...p }; delete n[u.user_id]; return n; });
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                        style={{ width: 50, padding: '3px 6px', borderRadius: 4, border: '1px solid var(--border-color)', fontSize: 13, textAlign: 'center', background: 'var(--bg-base)' }} />
                       </div>
-                      <button onClick={() => {
-                        const pwd = prompt(`Set password for ${u.user_id} (leave blank to remove custom password):`);
-                        if (pwd !== null) handleUpdateUserLimit(u.user_id, u.monthly_limit); // dummy await
-                        // Send PATCH with password
-                        adminFetch(`/users/${u.user_id}`, { method: 'PATCH', body: JSON.stringify({ password: pwd }) })
-                          .then(() => loadUsers())
-                          .catch(e => setError(e.message));
-                      }}
-                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--accent-primary)' }}>
-                        Set Password
-                      </button>
+                      {pwdEdit?.userId === u.user_id ? (
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <input type="text" placeholder="New password" value={pwdEdit.value} autoFocus
+                            onChange={e => setPwdEdit(p => ({ ...p, value: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleSetPassword(u.user_id, pwdEdit.value);
+                              if (e.key === 'Escape') setPwdEdit(null);
+                            }}
+                            style={{ width: 110, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--accent-primary)', fontSize: 12, background: 'var(--bg-base)' }} />
+                          <button onClick={() => handleSetPassword(u.user_id, pwdEdit.value)}
+                            style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
+                            Save
+                          </button>
+                          <button onClick={() => setPwdEdit(null)}
+                            style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 11 }}>
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setPwdEdit({ userId: u.user_id, value: '' })}
+                          style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: 'var(--accent-primary)' }}>
+                          Set Password
+                        </button>
+                      )}
                       <button onClick={() => handleToggleDisable(u.user_id, u.is_disabled)}
                         style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                           color: u.is_disabled ? '#059669' : '#dc2626' }}>
@@ -486,9 +553,7 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
                     </button>
                   </div>
                   {ingestLogs && (
-                    <div style={{ background: '#0f172a', borderRadius: 8, padding: 12, fontFamily: 'monospace', fontSize: 12, color: '#10b981', maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>
-                      {ingestLogs}
-                    </div>
+                    <AutoScrollConsole text={ingestLogs} style={{ maxHeight: 300 }} />
                   )}
                 </div>
               )}
@@ -525,7 +590,7 @@ export default function AdminView({ adminPassword, apiUrl, onLogout }) {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <div style={{ position: 'relative', flex: 1 }}>
                       <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <input value={notesFilter} onChange={e => { setNotesFilter(e.target.value); setNotesPage(1); loadNotes(1, e.target.value); }}
+                      <input value={notesFilter} onChange={e => { setNotesFilter(e.target.value); setNotesPage(1); }}
                         placeholder="Filter by user ID..." style={{ ...inputStyle, paddingLeft: 36 }} />
                     </div>
                     <button onClick={() => { setNotesPage(1); loadNotes(1, notesFilter); }}

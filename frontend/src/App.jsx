@@ -3,6 +3,7 @@ import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
 import TechTreeGraph from './TechTreeGraph';
 import AdminView from './AdminView';
+import { useUI, AutoScrollConsole } from './ui.jsx';
 import { 
   Folder, 
   FolderOpen, 
@@ -78,6 +79,8 @@ function AdminLoginForm({ apiUrl, onSuccess, onBack }) {
 }
 
 export default function App() {
+  const { toast, confirmDialog } = useUI();
+
   // Authentication State
   const [password, setPassword] = useState(() => localStorage.getItem('tm_password') || '');
   const [userId, setUserId] = useState(() => localStorage.getItem('tm_user_id') || 'default');
@@ -89,7 +92,8 @@ export default function App() {
   // App Data State
   const [notes, setNotes] = useState([]);
   const [queue, setQueue] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [booting, setBooting] = useState(true); // gates the full-screen loader ONLY during initial auth
+  const [refreshing, setRefreshing] = useState(false); // slim background refresh indicator
   const [activeCategory, setActiveCategory] = useState(null); // { root: string, sub: string | null }
   const [dashboardView, setDashboardView] = useState('grid'); // 'grid' or 'tree'
   const [expandedCategories, setExpandedCategories] = useState({}); // { [root]: boolean }
@@ -153,6 +157,7 @@ export default function App() {
   const [showConsole, setShowConsole] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState('');
   const [isIngesting, setIsIngesting] = useState(false);
+  const [isQueueing, setIsQueueing] = useState(false); // guards the queue-add button against double submits
 
   // Metadata Editor State
   const [isEditingMeta, setIsEditingMeta] = useState(false);
@@ -179,13 +184,14 @@ export default function App() {
     if (password) {
       verifyPassword(password, userId);
     } else {
-      setLoading(false);
+      setBooting(false);
     }
   }, [password]);
 
   const verifyPassword = async (pass, usrId = userId) => {
     if (isCapacitor && !API_URL) {
       setLoginError('Please configure your Server URL using the button below.');
+      setBooting(false);
       return;
     }
     try {
@@ -207,13 +213,17 @@ export default function App() {
         posthog.capture('user_login', { userId: usrId });
         fetchData(pass, usrId);
       } else {
+        // Stored password is stale (e.g. changed elsewhere) — drop it so the
+        // app doesn't bounce-loop on a dead credential.
+        localStorage.removeItem('tm_password');
+        setPassword('');
         setLoginError('Invalid application password.');
         setIsAuthenticated(false);
-        setLoading(false);
+        setBooting(false);
       }
     } catch (e) {
       setLoginError('Could not connect to local server: ' + e.message);
-      setLoading(false);
+      setBooting(false);
     }
   };
 
@@ -228,9 +238,11 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
-  // Fetch Notes & Queue
+  // Fetch Notes & Queue — background refresh. Never unmounts the app UI:
+  // the first render after login is already up, so we only toggle a slim
+  // progress indicator (refreshing) while data reloads.
   const fetchData = async (pass = password, usrId = userId) => {
-    setLoading(true);
+    setRefreshing(true);
     try {
       const headers = { 
         'x-app-password': pass,
@@ -254,7 +266,8 @@ export default function App() {
     } catch (e) {
       console.error('Error fetching data:', e);
     } finally {
-      setLoading(false);
+      setRefreshing(false);
+      setBooting(false);
     }
   };
   // Chatbot logic functions
@@ -305,7 +318,7 @@ export default function App() {
         if (data.success) {
           setChatMessages(data.messages || []);
         } else {
-          alert('Error: ' + (data.error || 'Failed to send message'));
+          toast(data.error || 'Failed to send message', 'error');
         }
       } else {
         const errText = await res.text();
@@ -314,10 +327,10 @@ export default function App() {
           const errJson = JSON.parse(errText);
           parsedErr = errJson.error || errText;
         } catch (_) {}
-        alert('Error: ' + parsedErr);
+        toast(parsedErr, 'error');
       }
     } catch (err) {
-      alert('Network error: ' + err.message);
+      toast('Network error: ' + err.message, 'error');
     } finally {
       setSendingMessage(false);
     }
@@ -325,31 +338,36 @@ export default function App() {
 
   const handleResetChat = async () => {
     if (!selectedNote) return;
-    if (!window.confirm('Are you sure you want to reset and clear the chat history for this summary?')) return;
-    
-    setSendingMessage(true);
-    try {
-      const res = await fetch(`${API_URL}/api/note/${selectedNote.id}/chat/reset`, {
-        method: 'POST',
-        headers: {
-          'x-app-password': password,
-          'x-user-id': userId,
-          'Bypass-Tunnel-Reminder': 'true'
+    confirmDialog('Are you sure you want to reset and clear the chat history for this summary?', {
+      danger: true,
+      confirmLabel: 'Reset Chat',
+      onConfirm: async () => {
+        setSendingMessage(true);
+        try {
+          const res = await fetch(`${API_URL}/api/note/${selectedNote.id}/chat/reset`, {
+            method: 'POST',
+            headers: {
+              'x-app-password': password,
+              'x-user-id': userId,
+              'Bypass-Tunnel-Reminder': 'true'
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              setChatMessages([]);
+              toast('Chat history cleared.', 'success');
+            }
+          } else {
+            toast('Failed to reset chat history.', 'error');
+          }
+        } catch (err) {
+          toast('Network error: ' + err.message, 'error');
+        } finally {
+          setSendingMessage(false);
         }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setChatMessages([]);
-        }
-      } else {
-        alert('Failed to reset chat history.');
       }
-    } catch (err) {
-      alert('Network error: ' + err.message);
-    } finally {
-      setSendingMessage(false);
-    }
+    });
   };
 
   // Load specific note content
@@ -405,13 +423,14 @@ export default function App() {
   // Add URL to Queue
   const handleAddToQueue = async (e) => {
     e.preventDefault();
-    if (!newUrl) return;
+    if (!newUrl || isQueueing) return;
 
     if (monthlyIngestCount >= 20) {
-      alert('Usage Limit Reached: Free Tier accounts are limited to 20 video summaries per month. Please go to the My Profile tab and upgrade to Premium for unlimited summaries!');
+      toast('Usage limit reached: Free Tier accounts are limited to 20 video summaries per month. Upgrade to Premium in My Profile for unlimited summaries!', 'error');
       return;
     }
 
+    setIsQueueing(true);
     try {
       const res = await fetch(`${API_URL}/api/queue`, {
         method: 'POST',
@@ -429,13 +448,23 @@ export default function App() {
         setShowConsole(true);
         posthog.capture('video_queued', { url: newUrl, depth });
         setConsoleLogs(prev => prev + `[System] Queued URL: ${newUrl} with depth: ${depth}\n`);
+        toast('URL added to queue.', 'success');
         // Flash success for 2 seconds then clear input but keep form open
         setTimeout(() => { setUrlQueued(false); setNewUrl(''); fetchData(); }, 2000);
       } else {
-        alert('Failed to queue URL');
+        // Surface the server's actual error (quota, disabled account, bad URL...)
+        const errText = await res.text();
+        let parsedErr = 'Failed to queue URL';
+        try {
+          const errJson = JSON.parse(errText);
+          parsedErr = errJson.error || parsedErr;
+        } catch (_) {}
+        toast(parsedErr, 'error');
       }
     } catch (e) {
-      alert('Error: ' + e.message);
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setIsQueueing(false);
     }
   };
 
@@ -444,7 +473,8 @@ export default function App() {
     setIsIngesting(true);
     setShowConsole(true);
     posthog.capture('queue_ingestion_started');
-    setConsoleLogs(prev => prev + `[Ingest] Launching pipeline ingestion...\n`);
+    const runHeader = `\n════ Ingestion run — ${new Date().toLocaleString()} ════\n`;
+    setConsoleLogs(prev => prev + runHeader + `[Ingest] Launching pipeline ingestion...\n`);
     
     let hasMore = true;
     let loopCount = 0;
@@ -518,7 +548,7 @@ export default function App() {
         if (metadata && metadata.success) {
           setConsoleLogs(prev => prev + `[Success] Batch finished.\n`);
           fetchData();
-          
+
           if (metadata.remainingCount && metadata.remainingCount > 0) {
             hasMore = true;
             loopCount++;
@@ -526,15 +556,19 @@ export default function App() {
           } else {
             hasMore = false;
             setConsoleLogs(prev => prev + `[Success] All items in queue have been processed!\n`);
+            toast('Queue fully processed — your notes are ready.', 'success');
           }
         } else {
-          const err = metadata ? metadata.error : 'Unknown ingestion error';
+          const err = metadata ? metadata.error : 'Unknown ingestion error (the server may have timed out — try processing again)';
           setConsoleLogs(prev => prev + `[Error] Ingestion failed: ${err}\n`);
+          toast(`Ingestion failed: ${err}`, 'error');
           hasMore = false;
+          fetchData();
         }
       }
     } catch (e) {
       setConsoleLogs(prev => prev + `[Error] Connection error: ${e.message}\n`);
+      toast('Connection error during ingestion: ' + e.message, 'error');
     } finally {
       setIsIngesting(false);
     }
@@ -641,7 +675,7 @@ export default function App() {
       const main = newMainCategory.trim();
       const sub = newSubCategory.trim();
       if (!main) {
-        alert('Please specify at least a Main Category name.');
+        toast('Please specify at least a Main Category name.', 'error');
         setSavingMeta(false);
         return;
       }
@@ -675,16 +709,17 @@ export default function App() {
         if (result.success) {
           setSelectedNote(result.note);
           setIsEditingMeta(false);
+          toast('Note metadata saved.', 'success');
           await fetchData();
         } else {
-          alert('Failed to update metadata.');
+          toast('Failed to update metadata.', 'error');
         }
       } else {
-        const errorData = await res.json();
-        alert('Error updating note: ' + (errorData.error || res.statusText));
+        const errorData = await res.json().catch(() => ({}));
+        toast('Error updating note: ' + (errorData.error || res.statusText), 'error');
       }
     } catch (e) {
-      alert('Network error: ' + e.message);
+      toast('Network error: ' + e.message, 'error');
     } finally {
       setSavingMeta(false);
     }
@@ -692,91 +727,46 @@ export default function App() {
 
   const handleDeleteNote = async () => {
     if (!selectedNote) return;
-    if (!window.confirm(`Are you sure you want to permanently delete "${selectedNote.title}"?`)) {
-      return;
-    }
+    confirmDialog(`Are you sure you want to permanently delete "${selectedNote.title}"?`, {
+      danger: true,
+      confirmLabel: 'Delete Note',
+      onConfirm: async () => {
+        setDeletingNote(true);
+        try {
+          const res = await fetch(`${API_URL}/api/note/delete`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-app-password': password,
+              'x-user-id': userId,
+              'Bypass-Tunnel-Reminder': 'true'
+            },
+            body: JSON.stringify({ id: selectedNote.id })
+          });
 
-    setDeletingNote(true);
-    try {
-      const res = await fetch(`${API_URL}/api/note/delete`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-app-password': password,
-          'x-user-id': userId,
-          'Bypass-Tunnel-Reminder': 'true'
-        },
-        body: JSON.stringify({ id: selectedNote.id })
-      });
-
-      if (res.ok) {
-        setSelectedNote(null);
-        fetchData();
-      } else {
-        const errorData = await res.json();
-        alert('Error deleting note: ' + (errorData.error || res.statusText));
-      }
-    } catch (e) {
-      alert('Network error: ' + e.message);
-    } finally {
-      setDeletingNote(false);
-    }
-  };
-
-  const handleRenameCategory = async (oldPath) => {
-    const oldPathStr = oldPath.join(' / ');
-    const newName = prompt(`Rename category "${oldPathStr}" to:`, oldPath[oldPath.length - 1]);
-    
-    if (newName === null) return; // user cancelled
-    const trimmed = newName.trim();
-    if (!trimmed) {
-      alert('Category name cannot be empty.');
-      return;
-    }
-    if (trimmed === oldPath[oldPath.length - 1]) return; // no change
-
-    const newPath = [...oldPath];
-    newPath[newPath.length - 1] = trimmed;
-
-    try {
-      const res = await fetch(`${API_URL}/api/category/rename`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-app-password': password,
-          'x-user-id': userId,
-          'Bypass-Tunnel-Reminder': 'true'
-        },
-        body: JSON.stringify({ oldPath, newPath })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          if (activeCategory && activeCategory.root === oldPath[0]) {
-            if (oldPath.length === 1) {
-              setActiveCategory({ root: trimmed, sub: activeCategory.sub });
-            } else if (oldPath.length === 2 && activeCategory.sub === oldPath[1]) {
-              setActiveCategory({ root: activeCategory.root, sub: trimmed });
-            }
+          if (res.ok) {
+            setSelectedNote(null);
+            toast('Note deleted.', 'success');
+            fetchData();
+          } else {
+            const errorData = await res.json().catch(() => ({}));
+            toast('Error deleting note: ' + (errorData.error || res.statusText), 'error');
           }
-          await fetchData();
-        } else {
-          alert('Failed to rename category.');
+        } catch (e) {
+          toast('Network error: ' + e.message, 'error');
+        } finally {
+          setDeletingNote(false);
         }
-      } else {
-        const err = await res.json();
-        alert('Error: ' + (err.error || res.statusText));
       }
-    } catch (e) {
-      alert('Network error: ' + e.message);
-    }
+    });
   };
+
+  // Category rename happens inline via submitRenameCategory (double-click on a category)
 
   const submitRenameCategory = async (oldPath, newName) => {
     const trimmed = newName.trim();
     if (!trimmed) {
-      alert('Category name cannot be empty.');
+      toast('Category name cannot be empty.', 'error');
       return;
     }
     if (trimmed === oldPath[oldPath.length - 1]) {
@@ -811,14 +801,14 @@ export default function App() {
           }
           await fetchData();
         } else {
-          alert('Failed to rename category.');
+          toast('Failed to rename category.', 'error');
         }
       } else {
         const err = await res.json();
-        alert('Error: ' + (err.error || res.statusText));
+        toast('Error: ' + (err.error || res.statusText), 'error');
       }
     } catch (e) {
-      alert('Network error: ' + e.message);
+      toast('Network error: ' + e.message, 'error');
     } finally {
       setEditingCategoryPath(null);
     }
@@ -906,7 +896,8 @@ export default function App() {
     return url;
   };
 
-  if (loading) {
+  // Full-screen loader ONLY during initial boot (auth check before the first render)
+  if (booting) {
     return (
       <div className="lock-screen" style={{ color: 'var(--text-muted)' }}>
         <RefreshCw className="animate-spin" size={36} style={{ color: 'var(--accent-primary)' }} />
@@ -1063,6 +1054,15 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Slim background-refresh progress bar (replaces the old full-screen spinner swap) */}
+      {refreshing && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: 3, zIndex: 9999,
+          background: 'linear-gradient(90deg, transparent, var(--accent-primary), transparent)',
+          animation: 'refreshSweep 1s ease-in-out infinite'
+        }} />
+      )}
+
       {/* Ambient background glowing blobs */}
       <div className="ambient-blobs">
         <div className="blob-1"></div>
@@ -1342,7 +1342,7 @@ export default function App() {
                 onClick={() => setShowIngestForm(true)}
                 className="action-btn"
                 style={{
-                  background: '#0f172a',
+                  background: 'var(--accent-primary)',
                   color: '#fff',
                   borderRadius: '24px',
                   padding: '14px 32px',
@@ -1389,8 +1389,9 @@ export default function App() {
                     <option value="Detailed Notes">Detailed Notes</option>
                     <option value="Fine-Grained Study">Fine-Grained Study</option>
                   </select>
-                  <button type="submit" className="action-btn" style={{ background: urlQueued ? '#16a34a' : '#0f172a', transition: 'background 0.3s' }}>
-                    {urlQueued ? '✓ Queued!' : 'Queue Ingest'}
+                  <button type="submit" className="action-btn" disabled={isQueueing}
+                    style={{ background: urlQueued ? '#16a34a' : 'var(--accent-primary)', color: '#fff', transition: 'background 0.3s', opacity: isQueueing ? 0.6 : 1 }}>
+                    {urlQueued ? '✓ Queued!' : isQueueing ? 'Queuing...' : 'Queue Ingest'}
                   </button>
                   <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
                   <button 
@@ -1602,9 +1603,13 @@ export default function App() {
             </div>
 
             {/* Ingestion Status Info */}
-            <div style={{ background: '#0f172a', padding: '16px', borderRadius: '8px', color: '#10b981', fontFamily: 'monospace', fontSize: '11px', maxHeight: '120px', overflowY: 'auto', border: '1px solid var(--border-color)' }}>
-              {consoleLogs || 'No active logs. Queue a URL on the Home tab and tap Sync Ingest to run the extraction pipeline.'}
-            </div>
+            {consoleLogs ? (
+              <AutoScrollConsole text={consoleLogs} style={{ maxHeight: '160px' }} />
+            ) : (
+              <div style={{ background: '#0b1120', padding: '16px', borderRadius: '8px', color: '#64748b', fontFamily: 'monospace', fontSize: '11px', border: '1px solid var(--border-color)' }}>
+                No active logs. Queue a URL on the Home tab and tap Sync Ingest to run the extraction pipeline.
+              </div>
+            )}
 
             {/* Queue List Table */}
             <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1875,9 +1880,13 @@ export default function App() {
               </button>
             </div>
           </div>
-          <div className="logs-content">
-            {consoleLogs || 'No logs recorded. Queue URL and click Sync Ingest to run the extraction pipeline.'}
-          </div>
+          {consoleLogs ? (
+            <AutoScrollConsole text={consoleLogs} style={{ flex: 1 }} />
+          ) : (
+            <div className="logs-content" style={{ color: 'var(--text-muted)' }}>
+              No logs recorded. Queue URL and click Sync Ingest to run the extraction pipeline.
+            </div>
+          )}
         </div>
       </main>
 
@@ -1905,6 +1914,27 @@ export default function App() {
                 {loadingNote ? (
                   <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
                     <RefreshCw className="animate-spin" size={24} color="#8b5cf6" />
+                  </div>
+                ) : noteContent.startsWith('Failed to load') || noteContent.startsWith('Error reading') ? (
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    height: '100%', gap: 10, color: 'var(--text-muted)', textAlign: 'center', padding: 24
+                  }}>
+                    <FileText size={36} strokeWidth={1.2} />
+                    <p style={{ fontSize: 13.5, margin: 0 }}>{noteContent}</p>
+                    <button className="action-btn" onClick={() => loadNoteContent(selectedNote)}
+                      style={{ background: 'var(--bg-base)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: 12, padding: '8px 14px' }}>
+                      <RefreshCw size={12} /> Retry
+                    </button>
+                  </div>
+                ) : !noteContent.trim() ? (
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    height: '100%', gap: 10, color: 'var(--text-muted)', textAlign: 'center', padding: 24
+                  }}>
+                    <FileText size={36} strokeWidth={1.2} />
+                    <p style={{ fontSize: 13.5, margin: 0 }}>This note has no content yet.</p>
+                    <p style={{ fontSize: 12, margin: 0 }}>Re-process the source URL from the queue to generate it.</p>
                   </div>
                 ) : (
                   renderMarkdown(noteContent)

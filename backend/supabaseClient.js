@@ -11,7 +11,19 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(
   supabaseUrl || 'https://oypqhmkklmuwbvfhctmo.supabase.co',
-  supabaseKey || 'sb_publishable_--l3W1BxBEfLa0fvzutWfg_6ND5D15Q'
+  supabaseKey || 'sb_publishable_--l3W1BxBEfLa0fvzutWfg_6ND5D15Q',
+  {
+    global: {
+      headers: { 'x-client-info': 'treemind-ai' },
+    },
+    db: {
+      schema: 'public',
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
 );
 
 module.exports = supabase;

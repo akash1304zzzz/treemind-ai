@@ -340,7 +340,9 @@ app.get('/api/tree', authMiddleware, async (req, res) => {
 app.use('/api/vault', authMiddleware, async (req, res, next) => {
   const userId = req.headers['x-user-id'] || req.query.userId || 'default';
   const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
-  const requestedPath = path.normalize(req.path).replace(/\\/g, '/');
+  // Decode percent-encoding (e.g. %20 for spaces in category folders) BEFORE matching
+  // against file_path values stored in the database, which contain literal characters.
+  const requestedPath = path.normalize(decodeURIComponent(req.path)).replace(/\\/g, '/');
   
   if (!requestedPath.startsWith(`/${safeUserId}/`)) {
     return res.status(403).json({ error: 'Access denied to this vault.' });
@@ -386,50 +388,77 @@ app.use('/api/vault', authMiddleware, async (req, res, next) => {
   }
 }));
 
-// 5. API settings update (write keys to .env)
-app.post('/api/settings', authMiddleware, (req, res) => {
+// 5. API settings update
+// Cloud mode (Supabase configured): persist to the app_settings table — the serverless
+// filesystem is read-only, so writing .env there would crash.
+// Local mode: write to the .env file as before.
+app.post('/api/settings', authMiddleware, async (req, res) => {
   const { geminiApiKey, nvidiaApiKey, apifyToken, appPassword } = req.body;
-  const envPath = path.join(__dirname, '../.env');
-  
-  let envContent = '';
-  if (fs.existsSync(envPath)) {
-    envContent = fs.readFileSync(envPath, 'utf8');
-  }
-  
-  const envVars = {};
-  // Parse existing environment variables
-  envContent.split('\n').forEach((line) => {
-    const parts = line.split('=');
-    if (parts.length >= 2) {
-      const key = parts[0].trim();
-      const val = parts.slice(1).join('=').trim();
-      if (key && !key.startsWith('#')) {
-        envVars[key] = val;
+  const isCloud = !!(process.env.SUPABASE_URL && process.env.SUPABASE_KEY);
+
+  try {
+    if (isCloud) {
+      const upserts = [];
+      if (geminiApiKey) upserts.push({ key: 'gemini_api_key', value: geminiApiKey });
+      if (nvidiaApiKey) upserts.push({ key: 'nvidia_api_key', value: nvidiaApiKey });
+      if (apifyToken) upserts.push({ key: 'apify_token', value: apifyToken });
+      if (appPassword) upserts.push({ key: 'app_password', value: appPassword });
+      if (upserts.length > 0) {
+        const { error } = await supabase.from('app_settings').upsert(upserts, { onConflict: 'key' });
+        if (error) throw error;
       }
+    } else {
+      const envPath = path.join(__dirname, '../.env');
+
+      let envContent = '';
+      if (fs.existsSync(envPath)) {
+        envContent = fs.readFileSync(envPath, 'utf8');
+      }
+
+      const envVars = {};
+      // Parse existing environment variables
+      envContent.split('\n').forEach((line) => {
+        const parts = line.split('=');
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          const val = parts.slice(1).join('=').trim();
+          if (key && !key.startsWith('#')) {
+            envVars[key] = val;
+          }
+        }
+      });
+
+      // Update values
+      if (geminiApiKey !== undefined) envVars['GEMINI_API_KEY'] = geminiApiKey;
+      if (nvidiaApiKey !== undefined) envVars['NVIDIA_API_KEY'] = nvidiaApiKey;
+      if (apifyToken !== undefined) envVars['APIFY_TOKEN'] = apifyToken;
+      if (appPassword !== undefined) envVars['APP_PASSWORD'] = appPassword;
+
+      // Format content
+      let newContent = '';
+      Object.keys(envVars).forEach((key) => {
+        newContent += `${key}=${envVars[key]}\n`;
+      });
+
+      fs.writeFileSync(envPath, newContent, 'utf8');
     }
-  });
-  
-  // Update values
-  if (geminiApiKey !== undefined) envVars['GEMINI_API_KEY'] = geminiApiKey;
-  if (nvidiaApiKey !== undefined) envVars['NVIDIA_API_KEY'] = nvidiaApiKey;
-  if (apifyToken !== undefined) envVars['APIFY_TOKEN'] = apifyToken;
-  if (appPassword !== undefined) envVars['APP_PASSWORD'] = appPassword;
-  
-  // Format content
-  let newContent = '';
-  Object.keys(envVars).forEach((key) => {
-    newContent += `${key}=${envVars[key]}\n`;
-  });
-  
-  fs.writeFileSync(envPath, newContent, 'utf8');
-  
-  // Reload environment variables in current process memory
-  if (geminiApiKey !== undefined) process.env.GEMINI_API_KEY = geminiApiKey;
-  if (nvidiaApiKey !== undefined) process.env.NVIDIA_API_KEY = nvidiaApiKey;
-  if (apifyToken !== undefined) process.env.APIFY_TOKEN = apifyToken;
-  if (appPassword !== undefined) process.env.APP_PASSWORD = appPassword;
-  
-  res.json({ success: true, message: 'Settings saved successfully.' });
+
+    // Reload environment variables in current process memory
+    if (geminiApiKey !== undefined) process.env.GEMINI_API_KEY = geminiApiKey;
+    if (nvidiaApiKey !== undefined) process.env.NVIDIA_API_KEY = nvidiaApiKey;
+    if (apifyToken !== undefined) process.env.APIFY_TOKEN = apifyToken;
+    if (appPassword !== undefined) process.env.APP_PASSWORD = appPassword;
+
+    res.json({ success: true, message: 'Settings saved successfully.' });
+  } catch (err) {
+    console.error('[Settings Save Error]:', err.message);
+    res.status(500).json({ error: `Failed to save settings: ${err.message}` });
+  }
+});
+
+// Simple health probe
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
 // 6. Ingest Trigger Endpoint
@@ -561,6 +590,9 @@ app.post('/api/note/update-metadata', authMiddleware, async (req, res) => {
       }});
     } catch (err) {
       console.error('[Supabase Metadata Update Error]:', err.message);
+      // In cloud mode there is no local fallback — surface the real DB error
+      // instead of falling through to a missing local tree.json (misleading 404).
+      return res.status(500).json({ error: `Database error: ${err.message}` });
     }
   }
 
@@ -702,6 +734,7 @@ app.post('/api/category/rename', authMiddleware, async (req, res) => {
       return res.json({ success: true, renamedCount });
     } catch (err) {
       console.error('[Supabase Category Rename Error]:', err.message);
+      return res.status(500).json({ error: `Database error: ${err.message}` });
     }
   }
 
@@ -792,6 +825,15 @@ app.post('/api/note/delete', authMiddleware, async (req, res) => {
 
   if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
     try {
+      // Fetch the note first so we can clean up its thumbnail, which is stored
+      // under the sanitized title (not the note id).
+      const { data: note } = await supabase
+        .from('notes')
+        .select('thumbnail_url')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
       const { error: dbErr } = await supabase
         .from('notes')
         .delete()
@@ -800,14 +842,18 @@ app.post('/api/note/delete', authMiddleware, async (req, res) => {
 
       if (dbErr) throw dbErr;
 
-      const filename = `${id}.jpg`;
-      await supabase.storage
-        .from('thumbnails')
-        .remove([filename]);
+      const thumbUrl = note?.thumbnail_url || '';
+      if (thumbUrl.includes('/thumbnails/')) {
+        const thumbName = thumbUrl.split('/thumbnails/')[1];
+        if (thumbName) {
+          await supabase.storage.from('thumbnails').remove([thumbName]);
+        }
+      }
 
       return res.json({ success: true, message: 'Note deleted successfully.' });
     } catch (err) {
       console.error('[Supabase Note Delete Error]:', err.message);
+      return res.status(500).json({ error: `Database error: ${err.message}` });
     }
   }
 

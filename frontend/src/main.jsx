@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react'
 import posthog from 'posthog-js'
 import './index.css'
 import App from './App.jsx'
+import { UIProvider } from './ui.jsx'
 
 // Initialize Sentry Frontend SDK if VITE_SENTRY_DSN is configured
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -31,6 +32,8 @@ if (import.meta.env.VITE_POSTHOG_KEY) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <UIProvider>
+      <App />
+    </UIProvider>
   </StrictMode>,
 )
