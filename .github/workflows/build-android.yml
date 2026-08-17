@@ -73,6 +73,9 @@ jobs:
 
             > ⚠️ You may need to enable "Install from unknown sources" in your phone's settings.
 
+            ### ✨ What's New in this Build:
+            ${{ github.event.head_commit.message }}
+
             ### How to use:
             1. Download `treemind-ai-v0.1.0-${{ github.run_number }}.apk` from the Assets section below
             2. Open the file on your phone to install
