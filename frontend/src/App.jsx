@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
+import { SendIntent } from '@mindlib-capacitor/send-intent';
 import TechTreeGraph from './TechTreeGraph';
 import AdminView from './AdminView';
 import { useUI, AutoScrollConsole } from './ui.jsx';
@@ -179,6 +180,41 @@ export default function App() {
   // 'login' = normal app login, 'admin-login' = admin password page, 'admin' = admin dashboard
   const [viewMode, setViewMode] = useState('login');
   const [adminPassword, setAdminPassword] = useState('');
+
+  // Listen for Android Share Intents (e.g. from Instagram/YouTube)
+  useEffect(() => {
+    if (isCapacitor) {
+      const handleIntent = async () => {
+        try {
+          const result = await SendIntent.checkSendIntentReceived();
+          if (result) {
+            // Instagram often shares text like "Check this out! https://..."
+            // Or just a raw URL.
+            const sharedText = result.text || result.url || result.title || '';
+            const urlMatch = sharedText.match(/(https?:\/\/[^\s]+)/);
+            if (urlMatch && urlMatch[0]) {
+              setNewUrl(urlMatch[0]);
+              setMobileTab('home');
+              setShowIngestForm(true);
+            } else if (sharedText) {
+              setNewUrl(sharedText);
+              setMobileTab('home');
+              setShowIngestForm(true);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to check send intent", err);
+        }
+      };
+
+      // Check initially when the app opens
+      handleIntent();
+
+      // Listen for intents if the app is already open in the background
+      window.addEventListener('sendIntentReceived', handleIntent);
+      return () => window.removeEventListener('sendIntentReceived', handleIntent);
+    }
+  }, []);
 
   // Authenticate on mount or password change
   useEffect(() => {

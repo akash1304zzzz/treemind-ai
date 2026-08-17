@@ -15,6 +15,7 @@
     "@capacitor/core": "^8.4.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@mindlib-capacitor/send-intent": "^8.0.6",
     "@sentry/react": "^10.65.0",
     "fuse.js": "^7.4.2",
     "lucide-react": "^1.23.0",
