@@ -31,8 +31,8 @@ import {
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
 // Capacitor Android: app runs from local assets, needs explicit backend URL
-// Users set their server IP in Settings; stored in localStorage as 'treemind_server_url'
 const isCapacitor = window.Capacitor !== undefined;
+const CLOUD_URL = 'https://treemind-ai.vercel.app';
 
 // ── Admin Login Form (standalone page component) ──
 function AdminLoginForm({ apiUrl, onSuccess, onBack }) {
@@ -147,7 +147,7 @@ export default function App() {
   const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('treemind_server_url') || '');
   const API_URL = useMemo(() => {
     if (serverUrl) return serverUrl.replace(/\/$/, '');
-    if (isCapacitor) return '';
+    if (isCapacitor) return CLOUD_URL;
     return window.location.port === '5173' ? 'http://localhost:5000' : '';
   }, [serverUrl]);
   const [settingsStatus, setSettingsStatus] = useState('');
@@ -188,11 +188,6 @@ export default function App() {
   }, [password]);
 
   const verifyPassword = async (pass, usrId = userId) => {
-    if (isCapacitor && !API_URL) {
-      setLoginError('Please configure your Server URL using the button below.');
-      setBooting(false);
-      return;
-    }
     try {
       const res = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
@@ -988,22 +983,22 @@ export default function App() {
                 <Shield size={12} /> Admin
               </button>
             </form>
-            {isCapacitor && (
-              <button 
+            {isCapacitor && serverUrl && (
+              <button
                 type="button"
-                className="action-btn" 
-                style={{ 
-                  width: '100%', 
-                  justifyContent: 'center', 
-                  marginTop: 12, 
-                  backgroundColor: 'var(--accent-glow)', 
+                className="action-btn"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  marginTop: 12,
+                  backgroundColor: 'var(--accent-glow)',
                   border: '1px dashed var(--accent-primary)',
                   color: 'var(--accent-primary)'
                 }}
                 onClick={() => setShowSettings(true)}
               >
                 <Settings size={16} style={{ marginRight: 8 }} />
-                Configure Server Connection
+                Change Server URL
               </button>
             )}
           </div>
