@@ -4,17 +4,16 @@ import Fuse from 'fuse.js';
 import TechTreeGraph from './TechTreeGraph';
 import AdminView from './AdminView';
 import { useUI, AutoScrollConsole } from './ui.jsx';
-import { 
-  Folder, 
-  FolderOpen, 
-  Search, 
-  Plus, 
-  Play, 
-  Clock, 
-  Settings, 
-  Lock, 
-  X, 
-  Terminal, 
+import {
+  Folder,
+  FolderOpen,
+  Search,
+  Plus,
+  Play,
+  Clock,
+  Settings,
+  Lock,
+  X,
   ExternalLink,
   ChevronRight,
   RefreshCw,
@@ -445,7 +444,6 @@ export default function App() {
 
       if (res.ok) {
         setUrlQueued(true);
-        setShowConsole(true);
         posthog.capture('video_queued', { url: newUrl, depth });
         setConsoleLogs(prev => prev + `[System] Queued URL: ${newUrl} with depth: ${depth}\n`);
         toast('URL added to queue.', 'success');
@@ -850,7 +848,12 @@ export default function App() {
       list = results.map(r => r.item);
     }
 
-    return list;
+    // Sort newest first (by dateProcessed)
+    return list.sort((a, b) => {
+      const dateA = a.dateProcessed || '';
+      const dateB = b.dateProcessed || '';
+      return dateB.localeCompare(dateA);
+    });
   }, [notes, activeCategory, searchQuery, fuse]);
 
   // Render Markdown Helper
@@ -1298,7 +1301,7 @@ export default function App() {
 
             {mobileTab === 'home' && (
               <div className="view-toggle-container" style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '3px', gap: '2px' }}>
-                <button 
+                <button
                   className={`view-toggle-btn ${dashboardView === 'grid' ? 'active' : ''}`}
                   onClick={() => setDashboardView('grid')}
                   style={{ padding: '6px 12px', border: 'none', display: 'flex', gap: '6px', alignItems: 'center' }}
@@ -1306,7 +1309,7 @@ export default function App() {
                   <Grid size={14} />
                   <span>Grid</span>
                 </button>
-                <button 
+                <button
                   className={`view-toggle-btn ${dashboardView === 'tree' ? 'active' : ''}`}
                   onClick={() => setDashboardView('tree')}
                   style={{ padding: '6px 12px', border: 'none', display: 'flex', gap: '6px', alignItems: 'center' }}
@@ -1315,22 +1318,6 @@ export default function App() {
                   <span>Tech Tree</span>
                 </button>
               </div>
-            )}
-
-            {mobileTab === 'home' && (
-              <button 
-                className="action-btn"
-                style={{
-                  background: isIngesting ? '#7c3aed' : 'rgba(139, 92, 246, 0.15)',
-                  border: '1px solid rgba(139, 92, 246, 0.3)',
-                  color: '#c084fc',
-                }}
-                onClick={triggerIngestion}
-                disabled={isIngesting}
-              >
-                <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
-                <span>{isIngesting ? 'Syncing...' : 'Sync Ingest'}</span>
-              </button>
             )}
           </div>
         </header>
@@ -1364,7 +1351,7 @@ export default function App() {
               <section className="paste-container glass-panel" style={{ width: 'calc(100% - 80px)', margin: '0 40px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                   <span style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Paste Source URL</span>
-                  <button 
+                  <button
                     onClick={() => setShowIngestForm(false)}
                     style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
                   >
@@ -1372,15 +1359,15 @@ export default function App() {
                   </button>
                 </div>
                 <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <input 
-                    type="url" 
+                  <input
+                    type="url"
                     className="url-input"
-                    placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..." 
+                    placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..."
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
                     required
                   />
-                  <select 
+                  <select
                     className="depth-select"
                     value={depth}
                     onChange={(e) => setDepth(e.target.value)}
@@ -1391,24 +1378,28 @@ export default function App() {
                   </select>
                   <button type="submit" className="action-btn" disabled={isQueueing}
                     style={{ background: urlQueued ? '#16a34a' : 'var(--accent-primary)', color: '#fff', transition: 'background 0.3s', opacity: isQueueing ? 0.6 : 1 }}>
-                    {urlQueued ? '✓ Queued!' : isQueueing ? 'Queuing...' : 'Queue Ingest'}
+                    {urlQueued ? '✓ Queued!' : isQueueing ? 'Queuing...' : 'Add to Queue'}
                   </button>
-                  <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} className="mobile-hide-divider" />
-                  <button 
+                </form>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
                     type="button"
                     className="action-btn"
                     style={{
-                      background: isIngesting ? '#7c3aed' : 'rgba(236, 72, 153, 0.15)',
-                      border: '1px solid rgba(236, 72, 153, 0.3)',
-                      color: '#f472b6',
+                      background: 'var(--accent-primary)',
+                      border: 'none',
+                      color: '#fff',
+                      padding: '10px 24px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
                     }}
                     onClick={triggerIngestion}
                     disabled={isIngesting}
                   >
-                    <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={16} />
-                    <span>{isIngesting ? 'Processing Ingestion...' : 'Process Queue'}</span>
+                    <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={14} />
+                    <span>{isIngesting ? 'Processing...' : 'Process Queue'}</span>
                   </button>
-                </form>
+                </div>
               </section>
             )}
           </div>
@@ -1585,36 +1576,42 @@ export default function App() {
         {mobileTab === 'queue' && (
           <section className="content-area" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700 }}>Queue Pipeline Actions</h3>
-              <button 
-                type="button"
-                className="action-btn"
-                style={{
-                  background: isIngesting ? '#7c3aed' : 'var(--accent-primary)',
-                  color: '#fff',
-                  padding: '8px 16px'
-                }}
-                onClick={triggerIngestion}
-                disabled={isIngesting}
-              >
-                <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={14} />
-                <span style={{ fontSize: 12 }}>{isIngesting ? 'Syncing...' : 'Sync Ingest'}</span>
-              </button>
+              <h3 style={{ fontSize: 16, fontWeight: 700 }}>Processing Queue</h3>
+              {queue.filter(q => !q.processed).length > 0 && (
+                <button
+                  type="button"
+                  className="action-btn"
+                  style={{
+                    background: isIngesting ? '#7c3aed' : 'var(--accent-primary)',
+                    color: '#fff',
+                    padding: '8px 16px'
+                  }}
+                  onClick={triggerIngestion}
+                  disabled={isIngesting}
+                >
+                  <RefreshCw className={isIngesting ? 'animate-spin' : ''} size={14} />
+                  <span style={{ fontSize: 12 }}>{isIngesting ? 'Processing...' : 'Process Queue'}</span>
+                </button>
+              )}
             </div>
 
-            {/* Ingestion Status Info */}
-            {consoleLogs ? (
-              <AutoScrollConsole text={consoleLogs} style={{ maxHeight: '160px' }} />
-            ) : (
-              <div style={{ background: '#0b1120', padding: '16px', borderRadius: '8px', color: '#64748b', fontFamily: 'monospace', fontSize: '11px', border: '1px solid var(--border-color)' }}>
-                No active logs. Queue a URL on the Home tab and tap Sync Ingest to run the extraction pipeline.
+            {/* Processing status card (when actively ingesting) */}
+            {isIngesting && (
+              <div className="glass-panel" style={{ padding: '20px', border: '1px solid rgba(14, 165, 233, 0.3)', background: 'var(--accent-glow)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <RefreshCw className="animate-spin" size={18} color="var(--accent-primary)" />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-primary)' }}>Processing your video...</span>
+                </div>
+                {consoleLogs && (
+                  <AutoScrollConsole text={consoleLogs} style={{ maxHeight: '140px', fontSize: 11 }} />
+                )}
               </div>
             )}
 
             {/* Queue List Table */}
             <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>Pending Items ({queue.filter(q => !q.processed).length})</h4>
-              
+
               {queue.filter(q => !q.processed).length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px 0' }}>No pending URLs in the queue.</p>
               ) : (
@@ -1857,37 +1854,56 @@ export default function App() {
           </section>
         )}
 
-        {/* Real-time Console Log Drawer */}
-        <div className={`logs-drawer ${showConsole ? 'open' : ''}`}>
-          <div className="logs-header">
-            <span style={{ fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981' }}>
-              <Terminal size={14} />
-              <span>Pipeline Logs Ingestion Drawer</span>
-              {isIngesting && <span style={{ background: '#059669', color: '#fff', fontSize: 10, padding: '2px 6px', borderRadius: '4px', animation: 'pulse 2s infinite' }}>PROCESSING</span>}
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                onClick={() => setConsoleLogs('')}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11 }}
-              >
-                Clear
-              </button>
-              <button 
-                onClick={() => setShowConsole(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                <X size={16} />
-              </button>
+        {/* Processing Modal — replaces the old terminal drawer */}
+        {showConsole && isIngesting && (
+          <div className="modal-overlay" style={{ zIndex: 3500, background: 'rgba(3, 4, 6, 0.7)' }}>
+            <div style={{
+              width: 'min(560px, calc(100vw - 40px))',
+              borderRadius: 16,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              animation: 'toastIn 0.3s cubic-bezier(0.16,1,0.3,1)'
+            }}>
+              {/* Header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 20px', borderBottom: '1px solid var(--border-color)',
+                background: 'var(--bg-base)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <RefreshCw className="animate-spin" size={16} color="var(--accent-primary)" />
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Processing Video</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setConsoleLogs('')}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 11, fontWeight: 500 }}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => setShowConsole(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+              {/* Log content */}
+              {consoleLogs ? (
+                <AutoScrollConsole text={consoleLogs} style={{ maxHeight: '320px', flex: 1 }} />
+              ) : (
+                <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
+                  Waiting for pipeline output...
+                </div>
+              )}
             </div>
           </div>
-          {consoleLogs ? (
-            <AutoScrollConsole text={consoleLogs} style={{ flex: 1 }} />
-          ) : (
-            <div className="logs-content" style={{ color: 'var(--text-muted)' }}>
-              No logs recorded. Queue URL and click Sync Ingest to run the extraction pipeline.
-            </div>
-          )}
-        </div>
+        )}
       </main>
 
       {/* Split Reading View Modal */}

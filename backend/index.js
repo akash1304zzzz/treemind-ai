@@ -295,7 +295,8 @@ app.get('/api/tree', authMiddleware, async (req, res) => {
       const { data, error } = await supabase
         .from('notes')
         .select('*')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .order('date_processed', { ascending: false, nullsFirst: false });
 
       if (error) throw error;
       

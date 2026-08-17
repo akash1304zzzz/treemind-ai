@@ -566,7 +566,7 @@ body {
   margin-bottom: 8px;
 }
 
-/* Console Log Drawer */
+/* Console Log Drawer (legacy — kept for Queue tab inline console) */
 .logs-drawer {
   position: fixed;
   bottom: 0;
@@ -602,10 +602,18 @@ body {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
   font-size: 12px;
   color: #10b981;
-  background: #0f172a; /* Tech terminal dark background retained for contrast */
+  background: #0f172a;
   overflow-y: auto;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+/* Glass panel utility */
+.glass-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
 }
 
 /* Password Screen */
