@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
 import { SendIntent } from '@mindlib-capacitor/send-intent';
@@ -184,6 +184,8 @@ export default function App() {
   const [renameInputValue, setRenameInputValue] = useState('');
   const [appVersion, setAppVersion] = useState('');
   
+  const lastIntentUrlRef = useRef('');
+
   // Custom Share UI Accordion States
   const [isFolderSelectorOpen, setIsFolderSelectorOpen] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState({});
@@ -204,13 +206,13 @@ export default function App() {
             // Or just a raw URL.
             const sharedText = result.text || result.url || result.title || '';
             const urlMatch = sharedText.match(/(https?:\/\/[^\s]+)/);
-            if (urlMatch && urlMatch[0]) {
-              setNewUrl(urlMatch[0]);
-              setShowShareModal(true);
-            } else if (sharedText) {
-              setNewUrl(sharedText);
-              setShowShareModal(true);
-            }
+            const extractedUrl = (urlMatch && urlMatch[0]) ? urlMatch[0] : sharedText;
+
+            if (!extractedUrl || extractedUrl === lastIntentUrlRef.current) return;
+            lastIntentUrlRef.current = extractedUrl;
+
+            setNewUrl(extractedUrl);
+            setShowShareModal(true);
           }
         } catch (err) {
           console.error("Failed to check send intent", err);
