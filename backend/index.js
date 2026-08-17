@@ -174,7 +174,7 @@ app.get('/api/queue', authMiddleware, async (req, res) => {
 });
 
 app.post('/api/queue', authMiddleware, async (req, res) => {
-  const { url, depth } = req.body;
+  const { url, depth, folder } = req.body;
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
@@ -253,7 +253,8 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   // Try to write to local queue.md — Python ingest script reads from here
   let localWriteSuccess = false;
   try {
-    const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})\n`;
+    const folderStr = folder ? ` (Folder: ${folder})` : '';
+    const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})${folderStr}\n`;
     fs.appendFileSync(queuePath, newLine, 'utf8');
     localWriteSuccess = true;
   } catch (err) {

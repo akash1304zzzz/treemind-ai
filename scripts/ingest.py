@@ -251,8 +251,8 @@ def main():
         lines = f.readlines()
 
     # Parse unchecked queue items
-    # Example: - [ ] https://www.instagram.com/reels/DaS88C-PUBk/ (Added: 2026-07-02 22:00) (Depth: Detailed Notes)
-    pattern = r'^\s*-\s*\[\s*\]\s*(https://[^\s\(\)]+)(?:\s*\(Added:\s*([^\)]+)\))?(?:\s*\(Depth:\s*([^\)]+)\))?'
+    # Example: - [ ] https://www.instagram.com/reels/DaS88C-PUBk/ (Added: 2026-07-02 22:00) (Depth: Detailed Notes) (Folder: Cooking)
+    pattern = r'^\s*-\s*\[\s*\]\s*(https://[^\s\(\)]+)(?:\s*\(Added:\s*([^\)]+)\))?(?:\s*\(Depth:\s*([^\)]+)\))?(?:\s*\(Folder:\s*([^\)]+)\))?'
     
     unprocessed_indices = []
     items_to_process = []
@@ -263,11 +263,13 @@ def main():
             url = match.group(1)
             added_time = match.group(2) or datetime.now().strftime("%Y-%m-%d %H:%M")
             depth = match.group(3) or "Detailed Notes"
+            folder = match.group(4) if match.lastindex >= 4 else None
             unprocessed_indices.append(idx)
             items_to_process.append({
                 "url": url,
                 "added_time": added_time,
                 "depth": depth,
+                "folder": folder,
                 "line_idx": idx
             })
 
@@ -315,7 +317,8 @@ def main():
     for item in items_to_process:
         url = item["url"]
         depth = item["depth"]
-        logger.info(f"Processing URL: {url} (Depth: {depth})")
+        req_folder = item.get("folder")
+        logger.info(f"Processing URL: {url} (Depth: {depth}) (Folder: {req_folder})")
         
         video_path = None
         scraped_meta = None
@@ -355,7 +358,12 @@ def main():
         {text_context}
         
         Create a note at the requested depth level: '{depth}'.
+        """
         
+        if req_folder:
+            prompt += f"\n        The user explicitly requested this note be placed in the folder: '{req_folder}'.\n        Set the categoryPath to match this exactly.\n"
+        
+        prompt += f"""
         Here are the existing category paths in the vault for reference:
         {existing_categories_str}
         
@@ -442,10 +450,13 @@ def main():
                 markdown_body = res_data.get("markdown") or res_data.get("Markdown") or res_data.get("content") or ""
                 
                 # Enforce max 2 categories depth
-                if len(category_path) > 2:
-                    category_path = category_path[:2]
-                elif not category_path:
-                    category_path = ["General"]
+                if req_folder:
+                    category_path = [x.strip() for x in req_folder.split('/')]
+                else:
+                    if len(category_path) > 2:
+                        category_path = category_path[:2]
+                    elif not category_path:
+                        category_path = ["General"]
                     
                 # Create category folder structure
                 note_dir = os.path.join(vault_path, *category_path)

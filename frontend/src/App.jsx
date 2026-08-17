@@ -171,6 +171,9 @@ export default function App() {
   const [deletingNote, setDeletingNote] = useState(false);
   const [mobileTab, setMobileTab] = useState('home'); // 'home', 'folders', 'queue', 'profile'
   const [showIngestForm, setShowIngestForm] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareFolder, setShareFolder] = useState('');
+  const [newShareFolder, setNewShareFolder] = useState('');
   const [urlQueued, setUrlQueued] = useState(false); // brief success flash after queuing
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
@@ -194,12 +197,10 @@ export default function App() {
             const urlMatch = sharedText.match(/(https?:\/\/[^\s]+)/);
             if (urlMatch && urlMatch[0]) {
               setNewUrl(urlMatch[0]);
-              setMobileTab('home');
-              setShowIngestForm(true);
+              setShowShareModal(true);
             } else if (sharedText) {
               setNewUrl(sharedText);
-              setMobileTab('home');
-              setShowIngestForm(true);
+              setShowShareModal(true);
             }
           }
         } catch (err) {
@@ -453,7 +454,7 @@ export default function App() {
   };
 
   // Add URL to Queue
-  const handleAddToQueue = async (e) => {
+  const handleAddToQueue = async (e, folderOverride = null) => {
     e.preventDefault();
     if (!newUrl || isQueueing) return;
 
@@ -472,7 +473,7 @@ export default function App() {
           'x-user-id': userId,
           'Bypass-Tunnel-Reminder': 'true'
         },
-        body: JSON.stringify({ url: newUrl, depth })
+        body: JSON.stringify({ url: newUrl, depth, folder: folderOverride })
       });
 
       if (res.ok) {
@@ -1097,6 +1098,81 @@ export default function App() {
           background: 'linear-gradient(90deg, transparent, var(--accent-primary), transparent)',
           animation: 'refreshSweep 1s ease-in-out infinite'
         }} />
+      )}
+
+      {/* Share Target Modal */}
+      {showShareModal && (
+        <div className="fullscreen-overlay" style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'var(--bg-base)', zIndex: 9999, display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
+            <h2 style={{ fontSize: 20, fontFamily: 'Outfit', fontWeight: 700 }}>Save to TreeMind</h2>
+            <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)' }}>
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>SOURCE URL</label>
+              <input type="url" className="url-input" value={newUrl} onChange={e => setNewUrl(e.target.value)} style={{ width: '100%' }} />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>SELECT FOLDER</label>
+              <select className="depth-select" style={{ width: '100%', marginBottom: shareFolder === '__create_new__' ? 12 : 0 }} value={shareFolder} onChange={e => setShareFolder(e.target.value)}>
+                <option value="">Default (General)</option>
+                {Object.keys(categoriesMap).map(root => (
+                  <optgroup key={root} label={root}>
+                    <option value={root}>{root}</option>
+                    {Array.from(categoriesMap[root]).map(sub => (
+                      <option key={`${root}/${sub}`} value={`${root} / ${sub}`}>{root} / {sub}</option>
+                    ))}
+                  </optgroup>
+                ))}
+                <option value="__create_new__">+ Create New Folder</option>
+              </select>
+              
+              {shareFolder === '__create_new__' && (
+                <input type="text" className="url-input" placeholder="e.g. Cooking / Recipes" value={newShareFolder} onChange={e => setNewShareFolder(e.target.value)} style={{ width: '100%' }} autoFocus />
+              )}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>PROCESSING DEPTH</label>
+              <select className="depth-select" style={{ width: '100%' }} value={depth} onChange={e => setDepth(e.target.value)}>
+                <option value="Quick Summary">Quick Summary</option>
+                <option value="Detailed Notes">Detailed Notes</option>
+                <option value="Fine-Grained Study">Fine-Grained Study</option>
+              </select>
+            </div>
+
+            <button 
+              className="action-btn"
+              disabled={isQueueing}
+              style={{
+                background: urlQueued ? '#16a34a' : 'var(--accent-primary)',
+                color: '#fff',
+                width: '100%',
+                padding: '16px',
+                justifyContent: 'center',
+                fontSize: 16,
+                fontWeight: 600,
+                marginTop: '12px'
+              }}
+              onClick={(e) => {
+                const finalFolder = shareFolder === '__create_new__' ? newShareFolder : shareFolder;
+                handleAddToQueue(e, finalFolder);
+                if (newUrl && !isQueueing) {
+                  setTimeout(() => setShowShareModal(false), 2000); // Close after queuing
+                }
+              }}
+            >
+              {urlQueued ? '✓ Added to Queue!' : isQueueing ? 'Queuing...' : 'Save & Ingest'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Ambient background glowing blobs */}
