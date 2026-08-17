@@ -148,8 +148,10 @@ export default function App() {
   const API_URL = useMemo(() => {
     if (serverUrl) return serverUrl.replace(/\/$/, '');
     if (isCapacitor) return CLOUD_URL;
-    return window.location.port === '5173' ? 'http://localhost:5000' : '';
+    return ''; // In dev, Vite proxy forwards /api → treemind-ai.vercel.app
   }, [serverUrl]);
+
+
   const [settingsStatus, setSettingsStatus] = useState('');
 
   // Logs & Ingestion Console State
@@ -1074,6 +1076,21 @@ export default function App() {
             <Sliders size={18} color="#fff" />
           </div>
           <span className="logo-text">TreeMind AI</span>
+          <span className="version-badge">v66</span>
+        </div>
+
+        {/* Mobile-only Folders page header */}
+        <div className="folders-page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="logo-icon" style={{ width: 30, height: 30 }}>
+              <Sliders size={15} color="#fff" />
+            </div>
+            <div>
+              <p style={{ fontFamily: 'Outfit', fontWeight: 700, fontSize: 17, color: 'var(--text-primary)', lineHeight: 1.2 }}>TreeMind AI</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Folders &amp; Categories</p>
+            </div>
+          </div>
+          <span className="version-badge">v66</span>
         </div>
 
         <div className="nav-buttons-container">
