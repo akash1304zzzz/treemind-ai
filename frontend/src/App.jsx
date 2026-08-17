@@ -28,7 +28,10 @@ import {
   User,
   Camera,
   Grid,
-  Network
+  Network,
+  Sparkles,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
@@ -180,6 +183,10 @@ export default function App() {
   const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
   const [renameInputValue, setRenameInputValue] = useState('');
   const [appVersion, setAppVersion] = useState('');
+  
+  // Custom Share UI Accordion States
+  const [isFolderSelectorOpen, setIsFolderSelectorOpen] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState({});
 
   // Admin Dashboard State — page-based routing (no router needed)
   // 'login' = normal app login, 'admin-login' = admin password page, 'admin' = admin dashboard
@@ -1135,18 +1142,95 @@ export default function App() {
 
             <div>
               <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>SELECT FOLDER</label>
-              <select className="depth-select" style={{ width: '100%', marginBottom: shareFolder === '__create_new__' ? 12 : 0 }} value={shareFolder} onChange={e => setShareFolder(e.target.value)}>
-                <option value="">Default (General)</option>
-                {Object.keys(categoriesMap).map(root => (
-                  <optgroup key={root} label={root}>
-                    <option value={root}>{root}</option>
-                    {Array.from(categoriesMap[root]).map(sub => (
-                      <option key={`${root}/${sub}`} value={`${root} / ${sub}`}>{root} / {sub}</option>
-                    ))}
-                  </optgroup>
-                ))}
-                <option value="__create_new__">+ Create New Folder</option>
-              </select>
+              <button 
+                className="depth-select" 
+                style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: shareFolder === '__create_new__' ? 12 : 0 }} 
+                onClick={() => setIsFolderSelectorOpen(!isFolderSelectorOpen)}
+              >
+                <span>{shareFolder === '' ? 'Auto-Categorize (AI)' : shareFolder === '__create_new__' ? '+ Create New Folder' : shareFolder}</span>
+                <ChevronDown size={16} color="var(--text-muted)" />
+              </button>
+
+              {isFolderSelectorOpen && (
+                <div style={{ marginTop: 8, background: 'rgba(0,0,0,0.15)', border: '1px solid var(--border-color)', borderRadius: 8, maxHeight: 280, overflowY: 'auto' }}>
+                  
+                  {/* Auto Categorize */}
+                  <div 
+                    style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+                    onClick={() => { setShareFolder(''); setIsFolderSelectorOpen(false); }}
+                  >
+                    <Sparkles size={16} color="var(--accent-primary)" />
+                    <span style={{ fontWeight: shareFolder === '' ? 700 : 500, color: shareFolder === '' ? 'var(--accent-primary)' : 'var(--text-primary)' }}>Auto-Categorize (AI)</span>
+                  </div>
+                  
+                  {/* Folder List */}
+                  {Object.keys(categoriesMap).map(root => {
+                    const subs = Array.from(categoriesMap[root]);
+                    const isExpanded = expandedFolders[root];
+                    return (
+                      <div key={root} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div 
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', cursor: 'pointer', background: isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent' }} 
+                          onClick={() => {
+                            if (subs.length > 0) {
+                              setExpandedFolders(prev => ({ ...prev, [root]: !prev[root] }));
+                            } else {
+                              setShareFolder(root);
+                              setIsFolderSelectorOpen(false);
+                            }
+                          }}
+                        >
+                          <div 
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }} 
+                            onClick={(e) => {
+                              // If it has subs, clicking the text still selects the root folder itself!
+                              e.stopPropagation();
+                              setShareFolder(root);
+                              setIsFolderSelectorOpen(false);
+                            }}
+                          >
+                            <Folder size={16} color="var(--text-secondary)" />
+                            <span style={{ fontWeight: shareFolder === root ? 700 : 500, color: shareFolder === root ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{root}</span>
+                          </div>
+                          
+                          {subs.length > 0 && (
+                            <div style={{ padding: 4 }}>
+                              {isExpanded ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {isExpanded && subs.length > 0 && (
+                          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 0' }}>
+                            {subs.map(sub => {
+                              const fullPath = `${root} / ${sub}`;
+                              return (
+                                <div 
+                                  key={sub}
+                                  style={{ padding: '12px 16px 12px 42px', cursor: 'pointer', fontSize: 14, color: shareFolder === fullPath ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 10, fontWeight: shareFolder === fullPath ? 600 : 400 }}
+                                  onClick={() => { setShareFolder(fullPath); setIsFolderSelectorOpen(false); }}
+                                >
+                                  <FolderOpen size={14} color={shareFolder === fullPath ? "var(--accent-primary)" : "var(--text-muted)"} />
+                                  <span>{sub}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Create New Folder */}
+                  <div 
+                    style={{ padding: '14px 16px', cursor: 'pointer', color: 'var(--accent-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}
+                    onClick={() => { setShareFolder('__create_new__'); setIsFolderSelectorOpen(false); }}
+                  >
+                    <Plus size={16} />
+                    <span>+ Create New Folder</span>
+                  </div>
+                </div>
+              )}
               
               {shareFolder === '__create_new__' && (
                 <input type="text" className="url-input" placeholder="e.g. Cooking / Recipes" value={newShareFolder} onChange={e => setNewShareFolder(e.target.value)} style={{ width: '100%' }} autoFocus />
