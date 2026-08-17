@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
 import { SendIntent } from '@mindlib-capacitor/send-intent';
+import { App as CapApp } from '@capacitor/app';
 import TechTreeGraph from './TechTreeGraph';
 import AdminView from './AdminView';
 import { useUI, AutoScrollConsole } from './ui.jsx';
@@ -178,6 +179,7 @@ export default function App() {
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
   const [renameInputValue, setRenameInputValue] = useState('');
+  const [appVersion, setAppVersion] = useState('');
 
   // Admin Dashboard State — page-based routing (no router needed)
   // 'login' = normal app login, 'admin-login' = admin password page, 'admin' = admin dashboard
@@ -213,7 +215,19 @@ export default function App() {
 
       // Listen for intents if the app is already open in the background
       window.addEventListener('sendIntentReceived', handleIntent);
-      return () => window.removeEventListener('sendIntentReceived', handleIntent);
+      
+      const stateChangeListener = CapApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) handleIntent();
+      });
+
+      CapApp.getInfo().then(info => {
+        setAppVersion(`v${info.version} (Build ${info.build})`);
+      });
+
+      return () => {
+        window.removeEventListener('sendIntentReceived', handleIntent);
+        stateChangeListener.then(listener => listener.remove());
+      };
     }
   }, []);
 
@@ -1188,7 +1202,6 @@ export default function App() {
             <Sliders size={18} color="#fff" />
           </div>
           <span className="logo-text">TreeMind AI</span>
-          <span className="version-badge">v66</span>
         </div>
 
         {/* Mobile-only Folders page header */}
@@ -1202,7 +1215,6 @@ export default function App() {
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Folders &amp; Categories</p>
             </div>
           </div>
-          <span className="version-badge">v66</span>
         </div>
 
         <div className="nav-buttons-container">
@@ -1777,7 +1789,10 @@ export default function App() {
         {/* Mobile Profile View */}
         {mobileTab === 'profile' && (
           <section className="content-area" style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-            <h3 style={{ fontSize: 18, fontFamily: 'Outfit', fontWeight: 700 }}>My Account & Profile</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: 18, fontFamily: 'Outfit', fontWeight: 700 }}>My Account & Profile</h3>
+              {appVersion && <span className="version-badge">{appVersion}</span>}
+            </div>
 
             {/* Ingestion Limit progress card */}
             <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>

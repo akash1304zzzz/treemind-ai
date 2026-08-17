@@ -45,9 +45,12 @@ jobs:
         working-directory: frontend/android
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      - name: Build Android APK
         working-directory: frontend/android
-        run: ./gradlew assembleDebug
+        run: |
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/g" app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"0.1.0-${{ github.run_number }}\"/g" app/build.gradle
+          ./gradlew assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
