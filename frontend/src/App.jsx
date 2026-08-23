@@ -178,8 +178,9 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState('home'); // 'home', 'folders', 'queue', 'profile'
   const [showIngestForm, setShowIngestForm] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [shareFolder, setShareFolder] = useState('');
+  const [shareFolder, setShareFolder] = useState(''); // "" = Auto
   const [newShareFolder, setNewShareFolder] = useState('');
+  const [shareUserNote, setShareUserNote] = useState('');
   const [urlQueued, setUrlQueued] = useState(false); // brief success flash after queuing
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [editingCategoryPath, setEditingCategoryPath] = useState(null); // e.g. [root] or [root, sub]
@@ -498,7 +499,7 @@ export default function App() {
           'x-user-id': userId,
           'Bypass-Tunnel-Reminder': 'true'
         },
-        body: JSON.stringify({ url: newUrl, depth, folder: folderOverride })
+        body: JSON.stringify({ url: newUrl, depth, folder: folderOverride, userNote: shareUserNote })
       });
 
       if (res.ok) {
@@ -507,7 +508,7 @@ export default function App() {
         setConsoleLogs(prev => prev + `[System] Queued URL: ${newUrl} with depth: ${depth}\n`);
         toast('URL added to queue.', 'success');
         // Flash success for 2 seconds then clear input but keep form open
-        setTimeout(() => { setUrlQueued(false); setNewUrl(''); fetchData(); }, 2000);
+        setTimeout(() => { setUrlQueued(false); setNewUrl(''); setShareUserNote(''); fetchData(); }, 2000);
       } else {
         // Surface the server's actual error (quota, disabled account, bad URL...)
         const errText = await res.text();
@@ -1260,6 +1261,17 @@ export default function App() {
               </select>
             </div>
 
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>WHY ARE YOU SAVING THIS? <span style={{ fontWeight: 400, opacity: 0.7 }}>(Optional)</span></label>
+              <textarea 
+                className="url-input" 
+                placeholder="e.g. Need this specific recipe for Thanksgiving..." 
+                value={shareUserNote} 
+                onChange={e => setShareUserNote(e.target.value)} 
+                style={{ width: '100%', minHeight: '80px', resize: 'vertical' }} 
+              />
+            </div>
+
             <button 
               className="action-btn"
               disabled={isQueueing}
@@ -1593,27 +1605,40 @@ export default function App() {
                   </button>
                 </div>
                 <form onSubmit={handleAddToQueue} style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <input
-                    type="url"
-                    className="url-input"
-                    placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..."
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    required
-                  />
-                  <select
-                    className="depth-select"
-                    value={depth}
-                    onChange={(e) => setDepth(e.target.value)}
-                  >
-                    <option value="Quick Summary">Quick Summary</option>
-                    <option value="Detailed Notes">Detailed Notes</option>
-                    <option value="Fine-Grained Study">Fine-Grained Study</option>
-                  </select>
-                  <button type="submit" className="action-btn" disabled={isQueueing}
-                    style={{ background: urlQueued ? '#16a34a' : 'var(--accent-primary)', color: '#fff', transition: 'background 0.3s', opacity: isQueueing ? 0.6 : 1 }}>
-                    {urlQueued ? '✓ Queued!' : isQueueing ? 'Queuing...' : 'Add to Queue'}
-                  </button>
+                  <div style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center' }}>
+                    <input
+                      type="url"
+                      className="url-input"
+                      placeholder="Paste Instagram Reel, YouTube, or Facebook Reel URL here..."
+                      value={newUrl}
+                      onChange={(e) => setNewUrl(e.target.value)}
+                      required
+                    />
+                    <select
+                      className="depth-select"
+                      value={depth}
+                      onChange={(e) => setDepth(e.target.value)}
+                    >
+                      <option value="Quick Summary">Quick Summary</option>
+                      <option value="Detailed Notes">Detailed Notes</option>
+                      <option value="Fine-Grained Study">Fine-Grained Study</option>
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: 'flex', width: '100%', gap: '12px', alignItems: 'center', marginTop: '4px' }}>
+                    <input
+                      type="text"
+                      className="url-input"
+                      placeholder="Why are you saving this? (Optional - Helps AI summarize better)"
+                      value={shareUserNote}
+                      onChange={(e) => setShareUserNote(e.target.value)}
+                      style={{ background: 'rgba(0,0,0,0.1)' }}
+                    />
+                    <button type="submit" className="action-btn" disabled={isQueueing}
+                      style={{ minWidth: '140px', background: urlQueued ? '#16a34a' : 'var(--accent-primary)', color: '#fff', transition: 'background 0.3s', opacity: isQueueing ? 0.6 : 1 }}>
+                      {urlQueued ? '✓ Queued!' : isQueueing ? 'Queuing...' : 'Add to Queue'}
+                    </button>
+                  </div>
                 </form>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button
