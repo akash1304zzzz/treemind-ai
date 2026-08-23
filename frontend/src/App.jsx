@@ -3,7 +3,7 @@ import posthog from 'posthog-js';
 import Fuse from 'fuse.js';
 import { SendIntent } from '@mindlib-capacitor/send-intent';
 import { App as CapApp } from '@capacitor/app';
-import TechTreeGraph from './TechTreeGraph';
+import CalendarView from './CalendarView';
 import AdminView from './AdminView';
 import { useUI, AutoScrollConsole } from './ui.jsx';
 import {
@@ -31,7 +31,8 @@ import {
   Network,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 
 const API_BASE = ''; // Proxy-less since Vite serves from same domain in production, but we fallback to port 5000 in dev
@@ -99,7 +100,8 @@ export default function App() {
   const [booting, setBooting] = useState(true); // gates the full-screen loader ONLY during initial auth
   const [refreshing, setRefreshing] = useState(false); // slim background refresh indicator
   const [activeCategory, setActiveCategory] = useState(null); // { root: string, sub: string | null }
-  const [dashboardView, setDashboardView] = useState('grid'); // 'grid' or 'tree'
+  const [dashboardView, setDashboardView] = useState('grid'); // 'grid' or 'calendar'
+  const [selectedDate, setSelectedDate] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({}); // { [root]: boolean }
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -913,6 +915,16 @@ export default function App() {
     });
   }, [notes, activeCategory, searchQuery, fuse]);
 
+  const calendarFilteredNotes = useMemo(() => {
+    if (dashboardView !== 'calendar' || !selectedDate) return filteredNotes;
+    return filteredNotes.filter(note => {
+      if (!note.dateProcessed) return false;
+      const dateObj = new Date(note.dateProcessed);
+      const dateString = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+      return dateString === selectedDate;
+    });
+  }, [filteredNotes, dashboardView, selectedDate]);
+
   // Render Markdown Helper
   const renderMarkdown = (md) => {
     if (!md) return null;
@@ -1532,12 +1544,12 @@ export default function App() {
                   <span>Grid</span>
                 </button>
                 <button
-                  className={`view-toggle-btn ${dashboardView === 'tree' ? 'active' : ''}`}
-                  onClick={() => setDashboardView('tree')}
+                  className={`view-toggle-btn ${dashboardView === 'calendar' ? 'active' : ''}`}
+                  onClick={() => setDashboardView('calendar')}
                   style={{ padding: '6px 12px', border: 'none', display: 'flex', gap: '6px', alignItems: 'center' }}
                 >
-                  <Network size={14} />
-                  <span>Tech Tree</span>
+                  <CalendarIcon size={14} />
+                  <span>Calendar</span>
                 </button>
               </div>
             )}
@@ -1630,15 +1642,25 @@ export default function App() {
         {/* Dashboard Grid / Recent List Toggle */}
         {mobileTab === 'home' && (
           <section className="content-area">
-            {dashboardView === 'tree' ? (
-              <TechTreeGraph notes={filteredNotes} onSelectNote={loadNoteContent} />
-            ) : (searchQuery.trim().length > 0 || showAllNotes) ? (
+            {dashboardView === 'calendar' && (
+              <CalendarView 
+                notes={notes} 
+                selectedDate={selectedDate} 
+                onSelectDate={setSelectedDate} 
+              />
+            )}
+            
+            {dashboardView === 'calendar' && !selectedDate ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>
+                Select a date on the calendar to view saved reels.
+              </div>
+            ) : (searchQuery.trim().length > 0 || showAllNotes || dashboardView === 'calendar') ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 700 }}>
-                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Processing History'}
+                    {dashboardView === 'calendar' ? `Reels Saved on ${selectedDate}` : searchQuery ? `Search Results for "${searchQuery}"` : 'All Processing History'}
                   </h3>
-                  {showAllNotes && !searchQuery && (
+                  {showAllNotes && !searchQuery && dashboardView !== 'calendar' && (
                     <button 
                       onClick={() => setShowAllNotes(false)}
                       style={{
@@ -1655,7 +1677,7 @@ export default function App() {
                   )}
                 </div>
                 
-                {filteredNotes.length === 0 ? (
+                {calendarFilteredNotes.length === 0 ? (
                   <div className="empty-state">
                     <Folder size={48} style={{ strokeWidth: 1.2, color: 'var(--text-muted)', marginBottom: 16 }} />
                     <h3>No Notes Found</h3>
@@ -1665,7 +1687,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="grid-layout">
-                    {filteredNotes.map((note) => {
+                    {calendarFilteredNotes.map((note) => {
                       const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
                       const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
                       return (
@@ -1721,12 +1743,12 @@ export default function App() {
               <div className="recent-processing-container" style={{ maxWidth: '600px', margin: '16px auto', width: '100%' }}>
                 <h3 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em', marginBottom: '16px', paddingLeft: '8px' }}>Recent Processing</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.02)' }}>
-                  {filteredNotes.length === 0 ? (
+                  {calendarFilteredNotes.length === 0 ? (
                     <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13.5 }}>
                       No notes processed yet. Paste a link above to start!
                     </div>
                   ) : (
-                    filteredNotes.slice(0, 3).map((note) => {
+                    calendarFilteredNotes.slice(0, 3).map((note) => {
                       const isYoutube = note.url.includes('youtube.com') || note.url.includes('youtu.be') || note.url.includes('shorts');
                       const isFacebook = note.url.includes('facebook.com') || note.url.includes('fb.watch') || note.url.includes('fb.com');
                       
@@ -1763,7 +1785,7 @@ export default function App() {
                   )}
                 </div>
                 
-                {filteredNotes.length > 0 && (
+                {calendarFilteredNotes.length > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
                     <button 
                       onClick={() => setShowAllNotes(true)}
