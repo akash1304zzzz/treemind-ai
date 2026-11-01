@@ -249,12 +249,14 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   const { queuePath } = getUserPaths(userId);
   const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
   const depthVal = depth || 'Detailed Notes';
+  const userNoteVal = req.body.userNote || '';
 
   // Try to write to local queue.md — Python ingest script reads from here
   let localWriteSuccess = false;
   try {
     const folderStr = folder ? ` (Folder: ${folder})` : '';
-    const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})${folderStr}\n`;
+    const noteStr = userNoteVal ? ` (Note: ${userNoteVal.replace(/\n/g, ' ')})` : '';
+    const newLine = `- [ ] ${url} (Added: ${timestamp}) (Depth: ${depthVal})${folderStr}${noteStr}\n`;
     fs.appendFileSync(queuePath, newLine, 'utf8');
     localWriteSuccess = true;
   } catch (err) {

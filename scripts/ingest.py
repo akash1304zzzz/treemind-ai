@@ -264,12 +264,21 @@ def main():
             added_time = match.group(2) or datetime.now().strftime("%Y-%m-%d %H:%M")
             depth = match.group(3) or "Detailed Notes"
             folder = match.group(4) if match.lastindex >= 4 else None
+            
+            user_note = None
+            if "(Note: " in line:
+                note_start = line.find("(Note: ") + 7
+                note_end = line.rfind(")")
+                if note_end > note_start:
+                    user_note = line[note_start:note_end].strip()
+
             unprocessed_indices.append(idx)
             items_to_process.append({
                 "url": url,
                 "added_time": added_time,
                 "depth": depth,
                 "folder": folder,
+                "user_note": user_note,
                 "line_idx": idx
             })
 
@@ -362,6 +371,10 @@ def main():
         
         if req_folder:
             prompt += f"\n        The user explicitly requested this note be placed in the folder: '{req_folder}'.\n        Set the categoryPath to match this exactly.\n"
+        
+        user_note = item.get("user_note")
+        if user_note:
+            prompt += f"\n        IMPORTANT CONTEXT FROM THE USER: \"Why I saved this: {user_note}\"\n        Use this user context heavily to shape your summary and categorization. Focus on what matters to them.\n"
         
         prompt += f"""
         Here are the existing category paths in the vault for reference:
