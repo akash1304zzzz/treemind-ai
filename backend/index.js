@@ -39,11 +39,21 @@ function getUserPaths(userId) {
     if (!fs.existsSync(vaultDir)) {
       fs.mkdirSync(vaultDir, { recursive: true });
     }
-    if (!fs.existsSync(treePath)) {
-      fs.writeFileSync(treePath, '[]', 'utf8');
+    const rootTree = path.join(__dirname, '../vault/tree.json');
+    if (!fs.existsSync(treePath) || (fs.existsSync(treePath) && fs.readFileSync(treePath, 'utf8').trim() === '[]')) {
+      if (fs.existsSync(rootTree) && fs.readFileSync(rootTree, 'utf8').trim() !== '[]') {
+        fs.copyFileSync(rootTree, treePath);
+      } else if (!fs.existsSync(treePath)) {
+        fs.writeFileSync(treePath, '[]', 'utf8');
+      }
     }
-    if (!fs.existsSync(queuePath)) {
-      fs.writeFileSync(queuePath, '# Remind AI Ingestion Queue\n\n', 'utf8');
+    const rootQueue = path.join(__dirname, '../queue.md');
+    if (!fs.existsSync(queuePath) || (fs.existsSync(queuePath) && fs.readFileSync(queuePath, 'utf8').trim() === '# Remind AI Ingestion Queue')) {
+      if (fs.existsSync(rootQueue)) {
+        fs.copyFileSync(rootQueue, queuePath);
+      } else if (!fs.existsSync(queuePath)) {
+        fs.writeFileSync(queuePath, '# Remind AI Ingestion Queue\n\n', 'utf8');
+      }
     }
   } catch (err) {
     console.warn(`[Local Filesystem Initialization Warning] Could not initialize local directory for ${safeUserId}:`, err.message);
@@ -58,7 +68,7 @@ async function authMiddleware(req, res, next) {
   const userId = req.headers['x-user-id'] || 'default';
 
   // 1. Check per-user password in DB
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data: user } = await supabase.from('users')
         .select('password, is_disabled')
@@ -87,7 +97,7 @@ app.post('/api/login', async (req, res) => {
   const userId = user_id || 'default';
 
   // Check per-user password in DB
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data: user } = await supabase.from('users')
         .select('password, is_disabled')
@@ -115,7 +125,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/queue', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
   
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data, error } = await supabase
         .from('queue')
@@ -182,7 +192,7 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
 
   // Check if user is disabled (admin can disable users)
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data: userRow } = await supabase
         .from('users')
@@ -198,7 +208,7 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
   // Enforcement check: dynamic monthly limit (per-user or global)
   const monthlyLimit = await getEffectiveLimit(userId);
   let currentMonthCount = 0;
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
@@ -265,7 +275,7 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
 
   // Also write to Supabase if available (for cloud/Vercel deployments)
   let supabaseWriteSuccess = false;
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { error } = await supabase
         .from('queue')
@@ -293,7 +303,7 @@ app.post('/api/queue', authMiddleware, async (req, res) => {
 app.get('/api/tree', authMiddleware, async (req, res) => {
   const userId = req.headers['x-user-id'] || 'default';
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data, error } = await supabase
         .from('notes')
@@ -348,11 +358,12 @@ app.use('/api/vault', authMiddleware, async (req, res, next) => {
   // against file_path values stored in the database, which contain literal characters.
   const requestedPath = path.normalize(decodeURIComponent(req.path)).replace(/\\/g, '/');
   
-  if (!requestedPath.startsWith(`/${safeUserId}/`)) {
+  const isAllowed = requestedPath.startsWith(`/${safeUserId}/`) || requestedPath.startsWith('/thumbnails/') || safeUserId === 'default';
+  if (!isAllowed) {
     return res.status(403).json({ error: 'Access denied to this vault.' });
   }
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       // 1. Handle thumbnails redirection to Supabase public bucket
       if (requestedPath.includes('/thumbnails/')) {
@@ -398,7 +409,7 @@ app.use('/api/vault', authMiddleware, async (req, res, next) => {
 // Local mode: write to the .env file as before.
 app.post('/api/settings', authMiddleware, async (req, res) => {
   const { geminiApiKey, nvidiaApiKey, apifyToken, appPassword } = req.body;
-  const isCloud = !!(process.env.SUPABASE_URL && process.env.SUPABASE_KEY);
+  const isCloud = await supabase.isAvailable();
 
   try {
     if (isCloud) {
@@ -538,7 +549,7 @@ app.post('/api/note/update-metadata', authMiddleware, async (req, res) => {
 
   const userId = req.headers['x-user-id'] || 'default';
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data: note, error: fetchErr } = await supabase
         .from('notes')
@@ -689,7 +700,7 @@ app.post('/api/category/rename', authMiddleware, async (req, res) => {
 
   const userId = req.headers['x-user-id'] || 'default';
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data: notes, error: fetchErr } = await supabase
         .from('notes')
@@ -827,7 +838,7 @@ app.post('/api/note/delete', authMiddleware, async (req, res) => {
 
   const userId = req.headers['x-user-id'] || 'default';
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       // Fetch the note first so we can clean up its thumbnail, which is stored
       // under the sanitized title (not the note id).
@@ -948,7 +959,7 @@ app.get('/api/note/:id/chat', authMiddleware, async (req, res) => {
   
   let markdown = '';
   
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data, error } = await supabase
         .from('notes')
@@ -1004,7 +1015,7 @@ app.post('/api/note/:id/chat', authMiddleware, async (req, res) => {
   let markdown = '';
   let noteRecord = null;
   
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data, error } = await supabase
         .from('notes')
@@ -1168,7 +1179,7 @@ Strict Constraint: You must ONLY answer questions based on the provided context 
 
   const updatedMarkdown = updateChatHistoryInMarkdown(markdown, messages);
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { error } = await supabase
         .from('notes')
@@ -1204,7 +1215,7 @@ app.post('/api/note/:id/chat/reset', authMiddleware, async (req, res) => {
   let markdown = '';
   let noteRecord = null;
   
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { data, error } = await supabase
         .from('notes')
@@ -1248,7 +1259,7 @@ app.post('/api/note/:id/chat/reset', authMiddleware, async (req, res) => {
 
   const updatedMarkdown = getCleanNoteBody(markdown);
 
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  if (await supabase.isAvailable()) {
     try {
       const { error } = await supabase
         .from('notes')

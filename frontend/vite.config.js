@@ -7,11 +7,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://treemind-ai.vercel.app',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:5000',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       }
     }
   }
 })
-
